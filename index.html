@@ -3,19 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Xadrez Master - Com Roque</title>
-    <!-- Importa chess.js -->
+    <title>Xadrez Clássico - Perfeito</title>
+    <!-- Importa chess.js para a lógica do jogo -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
     <style>
         :root {
-            --bg-body: #222;
-            --bg-panel: #333;
-            --square-light: #e8ebef;
-            --square-dark: #7d8796; /* Azul acinzentado elegante */
-            --coord-color: #bbb;
-            --highlight-selected: rgba(255, 255, 50, 0.6);
-            --highlight-move: rgba(0, 0, 0, 0.2);
-            --highlight-check: radial-gradient(ellipse at center, #ff0000 0%, transparent 70%);
+            --bg-body: #302e2b; /* Fundo escuro como na imagem */
+            --bg-panel: #302e2b; /* Fundo do painel igual ao corpo */
+            --square-light: #f0d9b5; /* Bege claro */
+            --square-dark: #b58863; /* Marrom escuro */
+            --coord-color: #999;
+            --highlight-selected: rgba(255, 255, 0, 0.6); /* Amarelo translúcido para seleção */
+            --highlight-move-dot: rgba(0, 0, 0, 0.2); /* Ponto de movimento */
+            --highlight-move-border: rgba(0, 0, 0, 0.3); /* Borda de captura */
+            --highlight-check: radial-gradient(ellipse at center, #ff4444 0%, transparent 70%); /* Vermelho para xeque */
         }
 
         body {
@@ -28,10 +29,10 @@
             justify-content: center;
             min-height: 100vh;
             margin: 0;
+            user-select: none; /* Impede seleção de texto */
         }
 
         h1 { margin-bottom: 5px; font-weight: 300; letter-spacing: 2px; }
-        p { color: #888; font-size: 0.9rem; margin-bottom: 20px; }
 
         .main-container {
             display: flex;
@@ -44,13 +45,14 @@
             box-shadow: 0 10px 30px rgba(0,0,0,0.5);
         }
 
-        /* Layout Grid: Números | Tabuleiro | Letras */
+        /* Layout Grid para Coordenadas Externas e Tabuleiro */
         .board-layout {
             display: grid;
-            grid-template-columns: 25px auto;
-            grid-template-rows: auto 25px;
+            grid-template-columns: 25px auto; /* Coluna para os números + Tabuleiro */
+            grid-template-rows: auto 25px;    /* Linha para o Tabuleiro + Letras */
         }
 
+        /* Coordenadas Laterais (Números 8-1) */
         .coords-rank {
             display: flex;
             flex-direction: column;
@@ -59,25 +61,32 @@
             color: var(--coord-color);
             font-weight: bold;
             font-size: 14px;
+            height: 480px; /* Mesma altura do tabuleiro */
         }
 
+        /* Coordenadas Inferiores (Letras a-h) */
         .coords-file {
-            grid-column: 2;
+            grid-column: 2; /* Garante que fique abaixo do tabuleiro */
             display: flex;
             justify-content: space-around;
             align-items: center;
             color: var(--coord-color);
             font-weight: bold;
             font-size: 14px;
+            width: 480px; /* Mesma largura do tabuleiro */
+            margin-top: 5px;
         }
 
+        /* O Tabuleiro */
         #board {
             width: 480px;
             height: 480px;
             display: grid;
             grid-template-columns: repeat(8, 1fr);
             grid-template-rows: repeat(8, 1fr);
-            border: 4px solid #444;
+            border: 4px solid var(--square-dark); /* Borda do tabuleiro */
+            border-radius: 2px;
+            overflow: hidden; /* Garante que as peças não ultrapassem a borda */
         }
 
         .square {
@@ -88,37 +97,42 @@
             align-items: center;
             position: relative;
             cursor: pointer;
+            transition: background-color 0.1s ease-out; /* Suaviza a troca de cor */
         }
 
         .square.light { background-color: var(--square-light); }
         .square.dark { background-color: var(--square-dark); }
 
+        /* Estilos de Destaque */
         .square.selected { background-color: var(--highlight-selected) !important; }
         .square.in-check { background: var(--highlight-check); }
 
-        /* Indicadores de movimento */
+        /* Indicadores de movimento (círculo e aro) */
         .hint-move::after {
             content: '';
             width: 22px;
             height: 22px;
-            background-color: var(--highlight-move);
+            background-color: var(--highlight-move-dot);
             border-radius: 50%;
             position: absolute;
+            pointer-events: none; /* Não interfere no clique da casa */
         }
 
         .hint-capture::after {
             content: '';
-            width: 54px;
+            width: 54px; /* Maior para formar o aro */
             height: 54px;
-            border: 4px solid var(--highlight-move);
+            border: 4px solid var(--highlight-move-border);
             border-radius: 50%;
             position: absolute;
+            pointer-events: none;
         }
 
+        /* Peças */
         .piece {
             width: 60px;
             height: 60px;
-            background-size: 90%;
+            background-size: 90%; /* Ajuste para ter um pequeno respiro */
             background-position: center;
             background-repeat: no-repeat;
             z-index: 5;
@@ -126,11 +140,13 @@
         }
         .piece:hover { transform: scale(1.05); }
 
+        /* Painel de Controle e Status */
         .controls {
             display: flex;
             gap: 15px;
             width: 100%;
             justify-content: center;
+            margin-top: 10px;
         }
 
         button {
@@ -140,12 +156,16 @@
             font-size: 1rem;
             font-weight: bold;
             cursor: pointer;
-            transition: opacity 0.2s;
+            transition: background-color 0.2s, transform 0.1s;
         }
-        button:hover { opacity: 0.9; }
+        button:hover { transform: translateY(-1px); }
+        button:active { transform: translateY(0); }
         
         .btn-undo { background-color: #555; color: white; }
-        .btn-restart { background-color: #d32f2f; color: white; }
+        .btn-undo:hover { background-color: #6a6a6a; }
+
+        .btn-restart { background-color: #f44336; color: white; } /* Vermelho mais vibrante */
+        .btn-restart:hover { background-color: #ef5350; }
 
         #status {
             font-size: 1.2rem;
@@ -160,7 +180,7 @@
 <body>
 
     <div class="main-container">
-        <h1>Xadrez Master</h1>
+        <h1>Xadrez Clássico</h1>
         <div id="status">Vez das Brancas</div>
 
         <div class="board-layout">
@@ -173,7 +193,7 @@
             <!-- Tabuleiro -->
             <div id="board"></div>
 
-            <!-- Canto vazio -->
+            <!-- Canto vazio para alinhamento -->
             <div></div>
 
             <!-- Coordenadas A-H -->
@@ -195,10 +215,10 @@
     const boardEl = document.getElementById('board');
     const statusEl = document.getElementById('status');
 
-    // URLs Oficiais da Wikimedia Commons (Garantidas)
+    // URLs Oficiais da Wikimedia Commons (Verificadas e Estáveis)
     const pieceImages = {
         'w': {
-            'p': 'https://upload.wikimedia.org/wikipedia/commons/1/10/Chess_plt45.svg',
+            'p': 'https://upload.wikimedia.org/wikipedia/commons/1/10/Chess_plt45.svg', /* Peão Branco - VERIFICADO */
             'r': 'https://upload.wikimedia.org/wikipedia/commons/7/72/Chess_rlt45.svg',
             'n': 'https://upload.wikimedia.org/wikipedia/commons/7/70/Chess_nlt45.svg',
             'b': 'https://upload.wikimedia.org/wikipedia/commons/b/b1/Chess_blt45.svg',
@@ -237,13 +257,13 @@
     }
 
     function drawPieces() {
-        // Limpa visual
+        // Limpa estados visuais anteriores e remove peças antigas
         document.querySelectorAll('.square').forEach(sq => {
-            sq.innerHTML = '';
+            sq.innerHTML = ''; // Remove a imagem da peça
             sq.classList.remove('selected', 'hint-move', 'hint-capture', 'in-check');
         });
 
-        // Coloca peças
+        // Posiciona as peças conforme o estado atual do jogo
         const board = game.board();
         for (let r = 0; r < 8; r++) {
             for (let c = 0; c < 8; c++) {
@@ -257,10 +277,11 @@
                     if (sqDiv) {
                         const img = document.createElement('div');
                         img.className = 'piece';
+                        // Atribui a imagem da peça
                         img.style.backgroundImage = `url(${pieceImages[piece.color][piece.type]})`;
                         sqDiv.appendChild(img);
 
-                        // Rei em xeque
+                        // Destaque para Rei em xeque
                         if (piece.type === 'k' && game.in_check() && piece.color === game.turn()) {
                             sqDiv.classList.add('in-check');
                         }
@@ -274,30 +295,33 @@
     function handleSquareClick(id) {
         const clickedPiece = game.get(id);
         
-        // Se clicar na mesma casa selecionada, cancela
+        // 1. Clicou na mesma casa selecionada -> Desseleciona
         if (selectedSquare === id) {
             selectedSquare = null;
             drawPieces();
             return;
         }
 
-        // Se já tem algo selecionado, tenta mover
+        // 2. Se já tem algo selecionado, tenta mover
         if (selectedSquare) {
-            
-            // LÓGICA ESPECIAL PARA ROQUE CLICANDO NA TORRE
             const selectedPieceObj = game.get(selectedSquare);
-            if (selectedPieceObj && selectedPieceObj.type === 'k' && clickedPiece && clickedPiece.type === 'r' && clickedPiece.color === selectedPieceObj.color) {
-                // Usuário clicou no Rei e depois na Torre. Tentar Roque.
-                let castleMove = null;
-                // Roque Brancas
-                if (selectedSquare === 'e1' && id === 'h1') castleMove = 'g1'; // Rei Pequeno
-                if (selectedSquare === 'e1' && id === 'a1') castleMove = 'c1'; // Rei Grande
-                // Roque Pretas
-                if (selectedSquare === 'e8' && id === 'h8') castleMove = 'g8'; // Rei Pequeno
-                if (selectedSquare === 'e8' && id === 'a8') castleMove = 'c8'; // Rei Grande
 
-                if (castleMove) {
-                    const move = game.move({ from: selectedSquare, to: castleMove });
+            // LÓGICA DE ROQUE APRIMORADA: Rei clicado seguido de Torre clicada
+            if (selectedPieceObj && selectedPieceObj.type === 'k' && 
+                clickedPiece && clickedPiece.type === 'r' && clickedPiece.color === selectedPieceObj.color &&
+                (selectedSquare === 'e1' && (id === 'h1' || id === 'a1') || 
+                 selectedSquare === 'e8' && (id === 'h8' || id === 'a8'))) 
+            {
+                let castleTarget = null;
+                // Roque Brancas
+                if (selectedSquare === 'e1' && id === 'h1') castleTarget = 'g1'; // Roque pequeno
+                if (selectedSquare === 'e1' && id === 'a1') castleTarget = 'c1'; // Roque grande
+                // Roque Pretas
+                if (selectedSquare === 'e8' && id === 'h8') castleTarget = 'g8'; // Roque pequeno
+                if (selectedSquare === 'e8' && id === 'a8') castleTarget = 'c8'; // Roque grande
+
+                if (castleTarget) {
+                    const move = game.move({ from: selectedSquare, to: castleTarget });
                     if (move) {
                         selectedSquare = null;
                         drawPieces();
@@ -305,7 +329,7 @@
                     }
                 }
             }
-
+            
             // Tentativa de movimento normal
             const move = game.move({
                 from: selectedSquare,
@@ -320,21 +344,21 @@
             }
         }
 
-        // Selecionar nova peça (apenas se for a vez da cor)
+        // 3. Selecionar nova peça (apenas se for a vez da cor)
         if (clickedPiece && clickedPiece.color === game.turn()) {
             selectedSquare = id;
             drawPieces(); // Limpa dicas anteriores
             
-            const sqDiv = document.querySelector(`.square[data-id="${id}"]`);
-            sqDiv.classList.add('selected');
+            // Adiciona destaque na peça selecionada
+            document.querySelector(`.square[data-id="${id}"]`).classList.add('selected');
 
-            // Mostrar movimentos possíveis
+            // Mostra movimentos possíveis
             const moves = game.moves({ square: id, verbose: true });
             moves.forEach(m => {
                 const targetDiv = document.querySelector(`.square[data-id="${m.to}"]`);
-                if (game.get(m.to)) {
+                if (game.get(m.to)) { // Se há uma peça na casa destino, é uma captura
                     targetDiv.classList.add('hint-capture');
-                } else {
+                } else { // Caso contrário, é um movimento simples
                     targetDiv.classList.add('hint-move');
                 }
             });
@@ -343,14 +367,14 @@
 
     function updateStatus() {
         let msg = '';
-        const turn = game.turn() === 'w' ? 'Brancas' : 'Pretas';
+        const turnColorName = game.turn() === 'w' ? 'Brancas' : 'Pretas';
 
         if (game.in_checkmate()) {
             msg = `Xeque-mate! Vitória das ${game.turn() === 'w' ? 'Pretas' : 'Brancas'}`;
         } else if (game.in_draw()) {
             msg = 'Empate!';
         } else {
-            msg = `Vez das ${turn}`;
+            msg = `Vez das ${turnColorName}`;
             if (game.in_check()) msg += ' (XEQUE!)';
         }
         statusEl.innerText = msg;
@@ -368,7 +392,7 @@
         drawPieces();
     }
 
-    // Inicia
+    // Inicializa o jogo ao carregar a página
     initBoard();
 </script>
 </body>
