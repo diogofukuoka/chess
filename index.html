@@ -3,12 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Xadrez Master - Versão Definitiva</title>
+    <title>Xadrez Master - Com Editor</title>
     <!-- Biblioteca de lógica Chess.js -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
     <style>
         :root {
-            /* Paleta de Cores Premium */
             --bg-body: #262522;
             --bg-panel: #262522;
             --board-border: #3c3b39;
@@ -16,19 +15,18 @@
             --square-dark: #b58863;
             --coord-color: #8b8987;
             
-            /* Destaques */
-            --highlight-selected: rgba(20, 85, 30, 0.5); /* Verde seleção */
-            --highlight-move: rgba(0, 0, 0, 0.15); /* Bola de movimento */
-            --highlight-capture: rgba(0, 0, 0, 0.2); /* Aro de captura */
+            --highlight-selected: rgba(20, 85, 30, 0.5);
+            --highlight-move: rgba(0, 0, 0, 0.15);
+            --highlight-capture: rgba(0, 0, 0, 0.2);
             --highlight-check: radial-gradient(ellipse at center, #ff0000 0%, transparent 60%);
             
-            /* Botões */
             --btn-bg: #454441;
             --btn-hover: #585653;
-            --btn-active: #3a3936;
             --btn-disabled: #2f2e2c;
             --btn-text: #cacaca;
-            --btn-text-disabled: #555;
+            --btn-active: #2b2a28;
+            
+            --modal-bg: rgba(0, 0, 0, 0.85);
         }
 
         body {
@@ -55,9 +53,10 @@
             padding: 25px;
             border-radius: 8px;
             box-shadow: 0 15px 40px rgba(0,0,0,0.5);
+            position: relative;
         }
 
-        /* --- Layout do Tabuleiro e Coordenadas --- */
+        /* Layout Tabuleiro */
         .board-container {
             display: grid;
             grid-template-columns: 25px auto;
@@ -94,6 +93,12 @@
             border: 3px solid var(--board-border);
             border-radius: 3px;
             overflow: hidden;
+            position: relative;
+        }
+
+        /* Quando em modo editor, borda muda de cor para indicar */
+        #board.editing {
+            border-color: #d69e2e;
         }
 
         .square {
@@ -111,7 +116,6 @@
         .square.selected { background-color: var(--highlight-selected) !important; }
         .square.in-check { background: var(--highlight-check); }
 
-        /* --- Dicas Visuais --- */
         .hint-move::after {
             content: '';
             width: 20px;
@@ -132,19 +136,16 @@
             pointer-events: none;
         }
 
-        /* --- Peças --- */
         .piece {
             width: 60px;
             height: 60px;
-            background-size: 100%; /* SVG preenche bem */
+            background-size: 100%;
             background-position: center;
             background-repeat: no-repeat;
             z-index: 10;
-            transition: transform 0.1s;
         }
-        .piece:hover { transform: scale(1.05); }
 
-        /* --- Painel de Status e Botões --- */
+        /* Status e Controles */
         #status {
             font-size: 1rem;
             color: #ddd;
@@ -152,6 +153,9 @@
             padding: 6px 16px;
             border-radius: 12px;
             margin-bottom: 5px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }
 
         .controls {
@@ -160,6 +164,7 @@
             margin-top: 10px;
             width: 100%;
             justify-content: center;
+            flex-wrap: wrap;
         }
 
         button {
@@ -171,7 +176,7 @@
             font-weight: 600;
             border-radius: 4px;
             cursor: pointer;
-            border-bottom: 3px solid rgba(0,0,0,0.2); /* Efeito 3D sutil */
+            border-bottom: 3px solid rgba(0,0,0,0.2);
             transition: all 0.15s;
             display: flex;
             align-items: center;
@@ -198,15 +203,84 @@
             transform: none;
         }
 
-        .btn-restart {
-            background-color: #bf4040;
-            color: #ffdada;
-            margin-left: 10px; /* Separar um pouco dos botões de histórico */
-        }
+        .btn-restart { background-color: #bf4040; color: #ffdada; }
         .btn-restart:hover:not(:disabled) { background-color: #d64a4a; }
+        
+        .btn-editor { background-color: #d69e2e; color: #3e2c00; }
+        .btn-editor:hover:not(:disabled) { background-color: #ecc94b; }
+        .btn-editor.active { background-color: #b7791f; border-bottom-width: 0; transform: translateY(2px); box-shadow: inset 0 3px 5px rgba(0,0,0,0.2); }
 
-        /* Ícones simples nos botões */
-        .icon { font-size: 1.1em; line-height: 1; }
+        .editor-controls {
+            display: none; /* Oculto por padrão */
+            gap: 10px;
+            margin-top: 10px;
+            padding: 10px;
+            background: rgba(0,0,0,0.2);
+            border-radius: 5px;
+            width: 100%;
+            justify-content: center;
+            box-sizing: border-box;
+        }
+
+        /* Modal de Seleção de Peças */
+        #pieceSelectorModal {
+            display: none;
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: var(--modal-bg);
+            z-index: 100;
+            border-radius: 8px;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .selector-grid {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 10px;
+            background: #333;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.8);
+        }
+
+        .selector-piece {
+            width: 50px;
+            height: 50px;
+            cursor: pointer;
+            transition: transform 0.2s;
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+        }
+        .selector-piece:hover { transform: scale(1.2); }
+
+        .selector-trash {
+            grid-column: span 6;
+            background-color: #bf4040;
+            color: white;
+            text-align: center;
+            padding: 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+        .selector-trash:hover { background-color: #d64a4a; }
+        
+        .selector-cancel {
+            margin-top: 10px;
+            background: transparent;
+            color: #aaa;
+            border: 1px solid #555;
+            padding: 5px 15px;
+            cursor: pointer;
+        }
 
     </style>
 </head>
@@ -214,56 +288,69 @@
 
     <div class="game-wrapper">
         <h1>Xadrez Master</h1>
+        
         <div id="status">Vez das Brancas</div>
 
         <div class="board-container">
-            <!-- Números 8-1 -->
             <div class="coords-rank">
                 <span>8</span><span>7</span><span>6</span><span>5</span>
                 <span>4</span><span>3</span><span>2</span><span>1</span>
             </div>
 
-            <!-- Tabuleiro -->
             <div id="board"></div>
 
-            <!-- Canto vazio -->
             <div></div>
 
-            <!-- Letras a-h -->
             <div class="coords-file">
                 <span>a</span><span>b</span><span>c</span><span>d</span>
                 <span>e</span><span>f</span><span>g</span><span>h</span>
             </div>
         </div>
 
+        <!-- Botões Principais -->
         <div class="controls">
-            <button id="btnUndo" onclick="undoMove()" disabled>
-                <span class="icon">&#8630;</span> Voltar
-            </button>
-            <button id="btnRedo" onclick="redoMove()" disabled>
-                Avançar <span class="icon">&#8631;</span>
-            </button>
-            <button class="btn-restart" onclick="restartGame()">
-                Reiniciar
-            </button>
+            <button id="btnUndo" onclick="undoMove()" disabled>Voltar</button>
+            <button id="btnRedo" onclick="redoMove()" disabled>Avançar</button>
+            <button class="btn-restart" onclick="restartGame()">Reiniciar</button>
+            <button id="btnEditor" class="btn-editor" onclick="toggleEditor()">Modo Editor</button>
+        </div>
+
+        <!-- Controles Específicos do Editor -->
+        <div id="editorControls" class="editor-controls">
+            <button onclick="clearBoard()">🗑️ Limpar Tudo</button>
+            <button onclick="setTurn('w')">Jogar de Brancas</button>
+            <button onclick="setTurn('b')">Jogar de Pretas</button>
+        </div>
+
+        <!-- Modal de Seleção de Peças -->
+        <div id="pieceSelectorModal">
+            <h3 style="color:white; margin:0;">Escolha a Peça</h3>
+            <div class="selector-grid" id="selectorGrid">
+                <!-- Gerado via JS -->
+            </div>
+            <button class="selector-cancel" onclick="closePieceSelector()">Cancelar</button>
         </div>
     </div>
 
 <script>
     const game = new Chess();
     let selectedSquare = null;
-    let redoStack = []; // Pilha para refazer jogadas
+    let redoStack = [];
+    let isEditorMode = false;
+    let editingSquare = null; // Qual casa estamos editando
 
     const boardEl = document.getElementById('board');
     const statusEl = document.getElementById('status');
     const btnUndo = document.getElementById('btnUndo');
     const btnRedo = document.getElementById('btnRedo');
+    const btnEditor = document.getElementById('btnEditor');
+    const editorControls = document.getElementById('editorControls');
+    const pieceSelectorModal = document.getElementById('pieceSelectorModal');
 
-    // Mapeamento de Peças usando SVGs do GitHub (Lichess - Tema cburnett)
-    // Fonte extremamente estável e de alta qualidade.
+    // URLs Oficiais (Lichess)
     const getPieceUrl = (color, type) => {
-        const c = color; // 'w' ou 'b'
-        const t = type.toUpperCase(); // 'P', 'N', 'B', 'R', 'Q', 'K'
+        const c = color; 
+        const t = type.toUpperCase();
         return `https://raw.githubusercontent.com/lichess-org/lila/master/public/piece/cburnett/${c}${t}.svg`;
     };
 
@@ -285,18 +372,18 @@
             }
             isLight = !isLight;
         }
+        
+        createPieceSelector();
         drawPieces();
         updateUI();
     }
 
     function drawPieces() {
-        // Limpa visual anterior
         document.querySelectorAll('.square').forEach(sq => {
             sq.innerHTML = '';
             sq.classList.remove('selected', 'hint-move', 'hint-capture', 'in-check');
         });
 
-        // Coloca as peças
         const board = game.board();
         for (let r = 0; r < 8; r++) {
             for (let c = 0; c < 8; c++) {
@@ -310,12 +397,10 @@
                     if (sqDiv) {
                         const img = document.createElement('div');
                         img.className = 'piece';
-                        // Gera a URL baseada na cor e tipo
                         img.style.backgroundImage = `url(${getPieceUrl(piece.color, piece.type)})`;
                         sqDiv.appendChild(img);
 
-                        // Checagem visual de Xeque
-                        if (piece.type === 'k' && game.in_check() && piece.color === game.turn()) {
+                        if (!isEditorMode && piece.type === 'k' && game.in_check() && piece.color === game.turn()) {
                             sqDiv.classList.add('in-check');
                         }
                     }
@@ -326,81 +411,178 @@
     }
 
     function handleSquareClick(id) {
+        // --- LÓGICA DO MODO EDITOR ---
+        if (isEditorMode) {
+            editingSquare = id;
+            openPieceSelector();
+            return;
+        }
+
+        // --- LÓGICA DO MODO JOGO ---
         const clickedPiece = game.get(id);
         
-        // 1. Cancelar seleção se clicar na mesma casa
         if (selectedSquare === id) {
             selectedSquare = null;
             drawPieces();
             return;
         }
 
-        // 2. Se já tem seleção, tenta mover
         if (selectedSquare) {
             const selectedPieceObj = game.get(selectedSquare);
-
-            // Lógica de Roque ao clicar no Rei e depois na Torre
+            
+            // Roque manual (Rei -> Torre)
             if (selectedPieceObj && selectedPieceObj.type === 'k' && 
                 clickedPiece && clickedPiece.type === 'r' && clickedPiece.color === selectedPieceObj.color) {
-                
                 let castleMove = null;
-                // Brancas
                 if (selectedSquare === 'e1') {
                     if (id === 'h1') castleMove = 'g1';
                     if (id === 'a1') castleMove = 'c1';
                 }
-                // Pretas
                 if (selectedSquare === 'e8') {
                     if (id === 'h8') castleMove = 'g8';
                     if (id === 'a8') castleMove = 'c8';
                 }
-
                 if (castleMove) {
                     if(attemptMove({ from: selectedSquare, to: castleMove })) return;
                 }
             }
 
-            // Tenta movimento normal
             if (attemptMove({ from: selectedSquare, to: id, promotion: 'q' })) return;
         }
 
-        // 3. Selecionar nova peça
         if (clickedPiece && clickedPiece.color === game.turn()) {
             selectedSquare = id;
-            drawPieces(); // Redesenha para limpar dicas antigas
-            
-            // Marca casa selecionada
+            drawPieces();
             document.querySelector(`.square[data-id="${id}"]`).classList.add('selected');
-
-            // Mostra movimentos possíveis
             const moves = game.moves({ square: id, verbose: true });
             moves.forEach(m => {
                 const targetSq = document.querySelector(`.square[data-id="${m.to}"]`);
-                if (game.get(m.to)) {
-                    targetSq.classList.add('hint-capture');
-                } else {
-                    targetSq.classList.add('hint-move');
-                }
+                if (game.get(m.to)) targetSq.classList.add('hint-capture');
+                else targetSq.classList.add('hint-move');
             });
         }
     }
 
-    // Tenta executar o movimento e atualiza histórico
     function attemptMove(moveObj) {
-        const result = game.move(moveObj);
-        if (result) {
-            selectedSquare = null;
-            redoStack = []; // Limpa pilha de avançar pois o histórico mudou
-            drawPieces();
-            updateUI();
-            return true;
-        }
+        try {
+            const result = game.move(moveObj);
+            if (result) {
+                selectedSquare = null;
+                redoStack = [];
+                drawPieces();
+                updateUI();
+                return true;
+            }
+        } catch (e) { return false; }
         return false;
     }
 
-    // --- Histórico e UI ---
+    // --- MODO EDITOR ---
+
+    function toggleEditor() {
+        isEditorMode = !isEditorMode;
+        selectedSquare = null; // Limpa seleções de jogo
+        
+        if (isEditorMode) {
+            btnEditor.classList.add('active');
+            btnEditor.innerText = "Sair do Editor";
+            boardEl.classList.add('editing');
+            editorControls.style.display = 'flex';
+            // Desabilita controles de jogo
+            btnUndo.disabled = true;
+            btnRedo.disabled = true;
+            statusEl.innerText = "MODO EDITOR: Clique numa casa para colocar/remover peças.";
+        } else {
+            btnEditor.classList.remove('active');
+            btnEditor.innerText = "Modo Editor";
+            boardEl.classList.remove('editing');
+            editorControls.style.display = 'none';
+            redoStack = []; // Limpa histórico ao sair do editor para evitar conflitos
+            drawPieces();
+            updateUI();
+        }
+    }
+
+    function clearBoard() {
+        game.clear();
+        drawPieces();
+    }
+
+    function setTurn(color) {
+        // Chess.js é rígido com turnos. Para forçar a vez, pegamos o FEN e alteramos a cor ativa.
+        let fen = game.fen();
+        let parts = fen.split(' ');
+        parts[1] = color; // 'w' ou 'b'
+        // Resetar relógio e en-passant para evitar erros
+        parts[3] = '-'; 
+        const newFen = parts.join(' ');
+        game.load(newFen);
+        updateStatus();
+    }
+
+    // --- SELETOR DE PEÇAS (MODAL) ---
+
+    function createPieceSelector() {
+        const grid = document.getElementById('selectorGrid');
+        grid.innerHTML = '';
+        const types = ['p', 'n', 'b', 'r', 'q', 'k'];
+        const colors = ['w', 'b'];
+
+        // Cria ícones para peças brancas e pretas
+        colors.forEach(c => {
+            types.forEach(t => {
+                const div = document.createElement('div');
+                div.className = 'selector-piece';
+                div.style.backgroundImage = `url(${getPieceUrl(c, t)})`;
+                div.onclick = () => placePiece(c, t);
+                grid.appendChild(div);
+            });
+        });
+
+        // Botão de remover peça (lixeira)
+        const trash = document.createElement('div');
+        trash.className = 'selector-trash';
+        trash.innerText = "Remover Peça / Vazio";
+        trash.onclick = () => removePiece();
+        grid.appendChild(trash);
+    }
+
+    function openPieceSelector() {
+        pieceSelectorModal.style.display = 'flex';
+    }
+
+    function closePieceSelector() {
+        pieceSelectorModal.style.display = 'none';
+        editingSquare = null;
+    }
+
+    function placePiece(color, type) {
+        if (editingSquare) {
+            // Remove qualquer peça existente primeiro para garantir
+            game.remove(editingSquare);
+            // Coloca a nova peça
+            game.put({ type: type, color: color }, editingSquare);
+            drawPieces();
+        }
+        closePieceSelector();
+    }
+
+    function removePiece() {
+        if (editingSquare) {
+            game.remove(editingSquare);
+            drawPieces();
+        }
+        closePieceSelector();
+    }
+
+    // --- SISTEMA ---
 
     function updateStatus() {
+        if (isEditorMode) {
+            statusEl.innerText = `Editando... Vez de começar: ${game.turn() === 'w' ? 'Brancas' : 'Pretas'}`;
+            return;
+        }
+
         let msg = '';
         const turn = game.turn() === 'w' ? 'Brancas' : 'Pretas';
 
@@ -416,15 +598,16 @@
     }
 
     function updateUI() {
-        // Habilita/Desabilita botões
+        if (isEditorMode) return;
         btnUndo.disabled = game.history().length === 0;
         btnRedo.disabled = redoStack.length === 0;
     }
 
     function undoMove() {
+        if(isEditorMode) return;
         const move = game.undo();
         if (move) {
-            redoStack.push(move); // Salva para poder refazer
+            redoStack.push(move);
             selectedSquare = null;
             drawPieces();
             updateUI();
@@ -432,6 +615,7 @@
     }
 
     function redoMove() {
+        if(isEditorMode) return;
         if (redoStack.length > 0) {
             const move = redoStack.pop();
             game.move(move);
@@ -445,11 +629,11 @@
         game.reset();
         redoStack = [];
         selectedSquare = null;
+        if (isEditorMode) toggleEditor(); // Sai do editor se reiniciar
         drawPieces();
         updateUI();
     }
 
-    // Iniciar
     initBoard();
 
 </script>
