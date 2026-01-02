@@ -3,90 +3,97 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Xadrez Clássico - Perfeito</title>
-    <!-- Importa chess.js para a lógica do jogo -->
+    <title>Xadrez Master - Versão Definitiva</title>
+    <!-- Biblioteca de lógica Chess.js -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
     <style>
         :root {
-            --bg-body: #302e2b; /* Fundo escuro como na imagem */
-            --bg-panel: #302e2b; /* Fundo do painel igual ao corpo */
-            --square-light: #f0d9b5; /* Bege claro */
-            --square-dark: #b58863; /* Marrom escuro */
-            --coord-color: #999;
-            --highlight-selected: rgba(255, 255, 0, 0.6); /* Amarelo translúcido para seleção */
-            --highlight-move-dot: rgba(0, 0, 0, 0.2); /* Ponto de movimento */
-            --highlight-move-border: rgba(0, 0, 0, 0.3); /* Borda de captura */
-            --highlight-check: radial-gradient(ellipse at center, #ff4444 0%, transparent 70%); /* Vermelho para xeque */
+            /* Paleta de Cores Premium */
+            --bg-body: #262522;
+            --bg-panel: #262522;
+            --board-border: #3c3b39;
+            --square-light: #f0d9b5; 
+            --square-dark: #b58863;
+            --coord-color: #8b8987;
+            
+            /* Destaques */
+            --highlight-selected: rgba(20, 85, 30, 0.5); /* Verde seleção */
+            --highlight-move: rgba(0, 0, 0, 0.15); /* Bola de movimento */
+            --highlight-capture: rgba(0, 0, 0, 0.2); /* Aro de captura */
+            --highlight-check: radial-gradient(ellipse at center, #ff0000 0%, transparent 60%);
+            
+            /* Botões */
+            --btn-bg: #454441;
+            --btn-hover: #585653;
+            --btn-active: #3a3936;
+            --btn-disabled: #2f2e2c;
+            --btn-text: #cacaca;
+            --btn-text-disabled: #555;
         }
 
         body {
-            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
             background-color: var(--bg-body);
-            color: white;
+            color: #ccc;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
             min-height: 100vh;
             margin: 0;
-            user-select: none; /* Impede seleção de texto */
+            user-select: none;
         }
 
-        h1 { margin-bottom: 5px; font-weight: 300; letter-spacing: 2px; }
+        h1 { margin-bottom: 5px; font-weight: 400; color: #fff; letter-spacing: 0.5px; }
 
-        .main-container {
+        .game-wrapper {
             display: flex;
             flex-direction: column;
             align-items: center;
             gap: 15px;
             background-color: var(--bg-panel);
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            padding: 25px;
+            border-radius: 8px;
+            box-shadow: 0 15px 40px rgba(0,0,0,0.5);
         }
 
-        /* Layout Grid para Coordenadas Externas e Tabuleiro */
-        .board-layout {
+        /* --- Layout do Tabuleiro e Coordenadas --- */
+        .board-container {
             display: grid;
-            grid-template-columns: 25px auto; /* Coluna para os números + Tabuleiro */
-            grid-template-rows: auto 25px;    /* Linha para o Tabuleiro + Letras */
+            grid-template-columns: 25px auto;
+            grid-template-rows: auto 25px;
         }
 
-        /* Coordenadas Laterais (Números 8-1) */
         .coords-rank {
             display: flex;
             flex-direction: column;
             justify-content: space-around;
             align-items: center;
             color: var(--coord-color);
-            font-weight: bold;
-            font-size: 14px;
-            height: 480px; /* Mesma altura do tabuleiro */
+            font-size: 13px;
+            font-weight: 600;
         }
 
-        /* Coordenadas Inferiores (Letras a-h) */
         .coords-file {
-            grid-column: 2; /* Garante que fique abaixo do tabuleiro */
+            grid-column: 2;
             display: flex;
             justify-content: space-around;
             align-items: center;
             color: var(--coord-color);
-            font-weight: bold;
-            font-size: 14px;
-            width: 480px; /* Mesma largura do tabuleiro */
-            margin-top: 5px;
+            font-size: 13px;
+            font-weight: 600;
+            padding-top: 4px;
         }
 
-        /* O Tabuleiro */
         #board {
             width: 480px;
             height: 480px;
             display: grid;
             grid-template-columns: repeat(8, 1fr);
             grid-template-rows: repeat(8, 1fr);
-            border: 4px solid var(--square-dark); /* Borda do tabuleiro */
-            border-radius: 2px;
-            overflow: hidden; /* Garante que as peças não ultrapassem a borda */
+            border: 3px solid var(--board-border);
+            border-radius: 3px;
+            overflow: hidden;
         }
 
         .square {
@@ -97,94 +104,120 @@
             align-items: center;
             position: relative;
             cursor: pointer;
-            transition: background-color 0.1s ease-out; /* Suaviza a troca de cor */
         }
 
         .square.light { background-color: var(--square-light); }
         .square.dark { background-color: var(--square-dark); }
-
-        /* Estilos de Destaque */
         .square.selected { background-color: var(--highlight-selected) !important; }
         .square.in-check { background: var(--highlight-check); }
 
-        /* Indicadores de movimento (círculo e aro) */
+        /* --- Dicas Visuais --- */
         .hint-move::after {
             content: '';
-            width: 22px;
-            height: 22px;
-            background-color: var(--highlight-move-dot);
-            border-radius: 50%;
-            position: absolute;
-            pointer-events: none; /* Não interfere no clique da casa */
-        }
-
-        .hint-capture::after {
-            content: '';
-            width: 54px; /* Maior para formar o aro */
-            height: 54px;
-            border: 4px solid var(--highlight-move-border);
+            width: 20px;
+            height: 20px;
+            background-color: var(--highlight-move);
             border-radius: 50%;
             position: absolute;
             pointer-events: none;
         }
 
-        /* Peças */
+        .hint-capture::after {
+            content: '';
+            width: 54px;
+            height: 54px;
+            border: 5px solid var(--highlight-capture);
+            border-radius: 50%;
+            position: absolute;
+            pointer-events: none;
+        }
+
+        /* --- Peças --- */
         .piece {
             width: 60px;
             height: 60px;
-            background-size: 90%; /* Ajuste para ter um pequeno respiro */
+            background-size: 100%; /* SVG preenche bem */
             background-position: center;
             background-repeat: no-repeat;
-            z-index: 5;
+            z-index: 10;
             transition: transform 0.1s;
         }
         .piece:hover { transform: scale(1.05); }
 
-        /* Painel de Controle e Status */
+        /* --- Painel de Status e Botões --- */
+        #status {
+            font-size: 1rem;
+            color: #ddd;
+            background: rgba(255,255,255,0.08);
+            padding: 6px 16px;
+            border-radius: 12px;
+            margin-bottom: 5px;
+        }
+
         .controls {
             display: flex;
-            gap: 15px;
+            gap: 8px;
+            margin-top: 10px;
             width: 100%;
             justify-content: center;
-            margin-top: 10px;
         }
 
         button {
-            padding: 10px 20px;
+            background-color: var(--btn-bg);
+            color: var(--btn-text);
             border: none;
-            border-radius: 5px;
-            font-size: 1rem;
-            font-weight: bold;
+            padding: 10px 16px;
+            font-size: 14px;
+            font-weight: 600;
+            border-radius: 4px;
             cursor: pointer;
-            transition: background-color 0.2s, transform 0.1s;
+            border-bottom: 3px solid rgba(0,0,0,0.2); /* Efeito 3D sutil */
+            transition: all 0.15s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
         }
-        button:hover { transform: translateY(-1px); }
-        button:active { transform: translateY(0); }
-        
-        .btn-undo { background-color: #555; color: white; }
-        .btn-undo:hover { background-color: #6a6a6a; }
 
-        .btn-restart { background-color: #f44336; color: white; } /* Vermelho mais vibrante */
-        .btn-restart:hover { background-color: #ef5350; }
-
-        #status {
-            font-size: 1.2rem;
+        button:hover:not(:disabled) {
+            background-color: var(--btn-hover);
             color: #fff;
-            background: rgba(0,0,0,0.3);
-            padding: 8px 20px;
-            border-radius: 20px;
-            margin-bottom: 10px;
+            transform: translateY(-1px);
         }
+
+        button:active:not(:disabled) {
+            transform: translateY(1px);
+            border-bottom-width: 0px;
+            margin-top: 3px;
+        }
+
+        button:disabled {
+            background-color: var(--btn-disabled);
+            color: var(--btn-text-disabled);
+            cursor: not-allowed;
+            border-bottom: 3px solid transparent;
+            transform: none;
+        }
+
+        .btn-restart {
+            background-color: #bf4040;
+            color: #ffdada;
+            margin-left: 10px; /* Separar um pouco dos botões de histórico */
+        }
+        .btn-restart:hover:not(:disabled) { background-color: #d64a4a; }
+
+        /* Ícones simples nos botões */
+        .icon { font-size: 1.1em; line-height: 1; }
+
     </style>
 </head>
 <body>
 
-    <div class="main-container">
-        <h1>Xadrez Clássico</h1>
+    <div class="game-wrapper">
+        <h1>Xadrez Master</h1>
         <div id="status">Vez das Brancas</div>
 
-        <div class="board-layout">
-            <!-- Coordenadas 8-1 -->
+        <div class="board-container">
+            <!-- Números 8-1 -->
             <div class="coords-rank">
                 <span>8</span><span>7</span><span>6</span><span>5</span>
                 <span>4</span><span>3</span><span>2</span><span>1</span>
@@ -193,10 +226,10 @@
             <!-- Tabuleiro -->
             <div id="board"></div>
 
-            <!-- Canto vazio para alinhamento -->
+            <!-- Canto vazio -->
             <div></div>
 
-            <!-- Coordenadas A-H -->
+            <!-- Letras a-h -->
             <div class="coords-file">
                 <span>a</span><span>b</span><span>c</span><span>d</span>
                 <span>e</span><span>f</span><span>g</span><span>h</span>
@@ -204,35 +237,34 @@
         </div>
 
         <div class="controls">
-            <button class="btn-undo" onclick="undoMove()">Voltar Jogada</button>
-            <button class="btn-restart" onclick="restartGame()">Reiniciar Jogo</button>
+            <button id="btnUndo" onclick="undoMove()" disabled>
+                <span class="icon">&#8630;</span> Voltar
+            </button>
+            <button id="btnRedo" onclick="redoMove()" disabled>
+                Avançar <span class="icon">&#8631;</span>
+            </button>
+            <button class="btn-restart" onclick="restartGame()">
+                Reiniciar
+            </button>
         </div>
     </div>
 
 <script>
     const game = new Chess();
     let selectedSquare = null;
+    let redoStack = []; // Pilha para refazer jogadas
+
     const boardEl = document.getElementById('board');
     const statusEl = document.getElementById('status');
+    const btnUndo = document.getElementById('btnUndo');
+    const btnRedo = document.getElementById('btnRedo');
 
-    // URLs Oficiais da Wikimedia Commons (Verificadas e Estáveis)
-    const pieceImages = {
-        'w': {
-            'p': 'https://upload.wikimedia.org/wikipedia/commons/1/10/Chess_plt45.svg', /* Peão Branco - VERIFICADO */
-            'r': 'https://upload.wikimedia.org/wikipedia/commons/7/72/Chess_rlt45.svg',
-            'n': 'https://upload.wikimedia.org/wikipedia/commons/7/70/Chess_nlt45.svg',
-            'b': 'https://upload.wikimedia.org/wikipedia/commons/b/b1/Chess_blt45.svg',
-            'q': 'https://upload.wikimedia.org/wikipedia/commons/1/15/Chess_qlt45.svg',
-            'k': 'https://upload.wikimedia.org/wikipedia/commons/4/42/Chess_klt45.svg'
-        },
-        'b': {
-            'p': 'https://upload.wikimedia.org/wikipedia/commons/c/c7/Chess_pdt45.svg',
-            'r': 'https://upload.wikimedia.org/wikipedia/commons/f/ff/Chess_rdt45.svg',
-            'n': 'https://upload.wikimedia.org/wikipedia/commons/e/ef/Chess_ndt45.svg',
-            'b': 'https://upload.wikimedia.org/wikipedia/commons/9/98/Chess_bdt45.svg',
-            'q': 'https://upload.wikimedia.org/wikipedia/commons/4/47/Chess_qdt45.svg',
-            'k': 'https://upload.wikimedia.org/wikipedia/commons/f/f0/Chess_kdt45.svg'
-        }
+    // Mapeamento de Peças usando SVGs do GitHub (Lichess - Tema cburnett)
+    // Fonte extremamente estável e de alta qualidade.
+    const getPieceUrl = (color, type) => {
+        const c = color; // 'w' ou 'b'
+        const t = type.toUpperCase(); // 'P', 'N', 'B', 'R', 'Q', 'K'
+        return `https://raw.githubusercontent.com/lichess-org/lila/master/public/piece/cburnett/${c}${t}.svg`;
     };
 
     function initBoard() {
@@ -254,16 +286,17 @@
             isLight = !isLight;
         }
         drawPieces();
+        updateUI();
     }
 
     function drawPieces() {
-        // Limpa estados visuais anteriores e remove peças antigas
+        // Limpa visual anterior
         document.querySelectorAll('.square').forEach(sq => {
-            sq.innerHTML = ''; // Remove a imagem da peça
+            sq.innerHTML = '';
             sq.classList.remove('selected', 'hint-move', 'hint-capture', 'in-check');
         });
 
-        // Posiciona as peças conforme o estado atual do jogo
+        // Coloca as peças
         const board = game.board();
         for (let r = 0; r < 8; r++) {
             for (let c = 0; c < 8; c++) {
@@ -277,11 +310,11 @@
                     if (sqDiv) {
                         const img = document.createElement('div');
                         img.className = 'piece';
-                        // Atribui a imagem da peça
-                        img.style.backgroundImage = `url(${pieceImages[piece.color][piece.type]})`;
+                        // Gera a URL baseada na cor e tipo
+                        img.style.backgroundImage = `url(${getPieceUrl(piece.color, piece.type)})`;
                         sqDiv.appendChild(img);
 
-                        // Destaque para Rei em xeque
+                        // Checagem visual de Xeque
                         if (piece.type === 'k' && game.in_check() && piece.color === game.turn()) {
                             sqDiv.classList.add('in-check');
                         }
@@ -295,105 +328,130 @@
     function handleSquareClick(id) {
         const clickedPiece = game.get(id);
         
-        // 1. Clicou na mesma casa selecionada -> Desseleciona
+        // 1. Cancelar seleção se clicar na mesma casa
         if (selectedSquare === id) {
             selectedSquare = null;
             drawPieces();
             return;
         }
 
-        // 2. Se já tem algo selecionado, tenta mover
+        // 2. Se já tem seleção, tenta mover
         if (selectedSquare) {
             const selectedPieceObj = game.get(selectedSquare);
 
-            // LÓGICA DE ROQUE APRIMORADA: Rei clicado seguido de Torre clicada
+            // Lógica de Roque ao clicar no Rei e depois na Torre
             if (selectedPieceObj && selectedPieceObj.type === 'k' && 
-                clickedPiece && clickedPiece.type === 'r' && clickedPiece.color === selectedPieceObj.color &&
-                (selectedSquare === 'e1' && (id === 'h1' || id === 'a1') || 
-                 selectedSquare === 'e8' && (id === 'h8' || id === 'a8'))) 
-            {
-                let castleTarget = null;
-                // Roque Brancas
-                if (selectedSquare === 'e1' && id === 'h1') castleTarget = 'g1'; // Roque pequeno
-                if (selectedSquare === 'e1' && id === 'a1') castleTarget = 'c1'; // Roque grande
-                // Roque Pretas
-                if (selectedSquare === 'e8' && id === 'h8') castleTarget = 'g8'; // Roque pequeno
-                if (selectedSquare === 'e8' && id === 'a8') castleTarget = 'c8'; // Roque grande
+                clickedPiece && clickedPiece.type === 'r' && clickedPiece.color === selectedPieceObj.color) {
+                
+                let castleMove = null;
+                // Brancas
+                if (selectedSquare === 'e1') {
+                    if (id === 'h1') castleMove = 'g1';
+                    if (id === 'a1') castleMove = 'c1';
+                }
+                // Pretas
+                if (selectedSquare === 'e8') {
+                    if (id === 'h8') castleMove = 'g8';
+                    if (id === 'a8') castleMove = 'c8';
+                }
 
-                if (castleTarget) {
-                    const move = game.move({ from: selectedSquare, to: castleTarget });
-                    if (move) {
-                        selectedSquare = null;
-                        drawPieces();
-                        return;
-                    }
+                if (castleMove) {
+                    if(attemptMove({ from: selectedSquare, to: castleMove })) return;
                 }
             }
-            
-            // Tentativa de movimento normal
-            const move = game.move({
-                from: selectedSquare,
-                to: id,
-                promotion: 'q' // Sempre promove para Rainha para simplificar
-            });
 
-            if (move) {
-                selectedSquare = null;
-                drawPieces();
-                return;
-            }
+            // Tenta movimento normal
+            if (attemptMove({ from: selectedSquare, to: id, promotion: 'q' })) return;
         }
 
-        // 3. Selecionar nova peça (apenas se for a vez da cor)
+        // 3. Selecionar nova peça
         if (clickedPiece && clickedPiece.color === game.turn()) {
             selectedSquare = id;
-            drawPieces(); // Limpa dicas anteriores
+            drawPieces(); // Redesenha para limpar dicas antigas
             
-            // Adiciona destaque na peça selecionada
+            // Marca casa selecionada
             document.querySelector(`.square[data-id="${id}"]`).classList.add('selected');
 
             // Mostra movimentos possíveis
             const moves = game.moves({ square: id, verbose: true });
             moves.forEach(m => {
-                const targetDiv = document.querySelector(`.square[data-id="${m.to}"]`);
-                if (game.get(m.to)) { // Se há uma peça na casa destino, é uma captura
-                    targetDiv.classList.add('hint-capture');
-                } else { // Caso contrário, é um movimento simples
-                    targetDiv.classList.add('hint-move');
+                const targetSq = document.querySelector(`.square[data-id="${m.to}"]`);
+                if (game.get(m.to)) {
+                    targetSq.classList.add('hint-capture');
+                } else {
+                    targetSq.classList.add('hint-move');
                 }
             });
         }
     }
 
+    // Tenta executar o movimento e atualiza histórico
+    function attemptMove(moveObj) {
+        const result = game.move(moveObj);
+        if (result) {
+            selectedSquare = null;
+            redoStack = []; // Limpa pilha de avançar pois o histórico mudou
+            drawPieces();
+            updateUI();
+            return true;
+        }
+        return false;
+    }
+
+    // --- Histórico e UI ---
+
     function updateStatus() {
         let msg = '';
-        const turnColorName = game.turn() === 'w' ? 'Brancas' : 'Pretas';
+        const turn = game.turn() === 'w' ? 'Brancas' : 'Pretas';
 
         if (game.in_checkmate()) {
             msg = `Xeque-mate! Vitória das ${game.turn() === 'w' ? 'Pretas' : 'Brancas'}`;
         } else if (game.in_draw()) {
             msg = 'Empate!';
         } else {
-            msg = `Vez das ${turnColorName}`;
+            msg = `Vez das ${turn}`;
             if (game.in_check()) msg += ' (XEQUE!)';
         }
         statusEl.innerText = msg;
     }
 
+    function updateUI() {
+        // Habilita/Desabilita botões
+        btnUndo.disabled = game.history().length === 0;
+        btnRedo.disabled = redoStack.length === 0;
+    }
+
     function undoMove() {
-        game.undo();
-        selectedSquare = null;
-        drawPieces();
+        const move = game.undo();
+        if (move) {
+            redoStack.push(move); // Salva para poder refazer
+            selectedSquare = null;
+            drawPieces();
+            updateUI();
+        }
+    }
+
+    function redoMove() {
+        if (redoStack.length > 0) {
+            const move = redoStack.pop();
+            game.move(move);
+            selectedSquare = null;
+            drawPieces();
+            updateUI();
+        }
     }
 
     function restartGame() {
         game.reset();
+        redoStack = [];
         selectedSquare = null;
         drawPieces();
+        updateUI();
     }
 
-    // Inicializa o jogo ao carregar a página
+    // Iniciar
     initBoard();
+
 </script>
 </body>
 </html>
