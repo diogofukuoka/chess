@@ -3,23 +3,23 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Xadrez Master - Versão Final</title>
+    <title>Xadrez Master - Com Roque</title>
     <!-- Importa chess.js -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
     <style>
         :root {
-            --bg-body: #302e2b;
-            --bg-board: #302e2b;
-            --square-light: #eeeed2;
-            --square-dark: #769656;
-            --coord-color: #999;
-            --highlight-last: rgba(255, 255, 50, 0.5); /* Amarelo translúcido */
-            --highlight-hover: rgba(255, 255, 255, 0.3); /* Branco translúcido */
-            --dot-color: rgba(0,0,0,0.15);
+            --bg-body: #222;
+            --bg-panel: #333;
+            --square-light: #e8ebef;
+            --square-dark: #7d8796; /* Azul acinzentado elegante */
+            --coord-color: #bbb;
+            --highlight-selected: rgba(255, 255, 50, 0.6);
+            --highlight-move: rgba(0, 0, 0, 0.2);
+            --highlight-check: radial-gradient(ellipse at center, #ff0000 0%, transparent 70%);
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
             background-color: var(--bg-body);
             color: white;
             display: flex;
@@ -30,58 +30,54 @@
             margin: 0;
         }
 
-        h1 { margin-bottom: 5px; font-weight: 400; letter-spacing: 1px; }
+        h1 { margin-bottom: 5px; font-weight: 300; letter-spacing: 2px; }
+        p { color: #888; font-size: 0.9rem; margin-bottom: 20px; }
 
         .main-container {
             display: flex;
             flex-direction: column;
             align-items: center;
             gap: 15px;
+            background-color: var(--bg-panel);
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
         }
 
-        /* Estrutura do Tabuleiro com Coordenadas Externas */
+        /* Layout Grid: Números | Tabuleiro | Letras */
         .board-layout {
             display: grid;
-            grid-template-columns: 25px auto; /* Margem esquerda para números */
-            grid-template-rows: auto 25px;    /* Margem inferior para letras */
-            user-select: none;
+            grid-template-columns: 25px auto;
+            grid-template-rows: auto 25px;
         }
 
-        /* Coordenadas Laterais (1-8) */
         .coords-rank {
             display: flex;
             flex-direction: column;
             justify-content: space-around;
             align-items: center;
             color: var(--coord-color);
+            font-weight: bold;
             font-size: 14px;
-            font-weight: 600;
-            height: 480px; /* Mesma altura do tabuleiro */
         }
 
-        /* Coordenadas Inferiores (a-h) */
         .coords-file {
             grid-column: 2;
             display: flex;
-            flex-direction: row;
             justify-content: space-around;
             align-items: center;
             color: var(--coord-color);
+            font-weight: bold;
             font-size: 14px;
-            font-weight: 600;
-            width: 480px; /* Mesma largura do tabuleiro */
-            margin-top: 5px;
         }
 
-        /* O Tabuleiro */
         #board {
             width: 480px;
             height: 480px;
             display: grid;
             grid-template-columns: repeat(8, 1fr);
             grid-template-rows: repeat(8, 1fr);
-            border: 3px solid #444;
-            border-radius: 3px;
+            border: 4px solid #444;
         }
 
         .square {
@@ -97,95 +93,78 @@
         .square.light { background-color: var(--square-light); }
         .square.dark { background-color: var(--square-dark); }
 
-        /* Estilos de Destaque */
-        .square.selected {
-            background-color: #bbc !important; /* Cor de seleção azulada/cinza */
-        }
+        .square.selected { background-color: var(--highlight-selected) !important; }
+        .square.in-check { background: var(--highlight-check); }
 
-        /* Bolinha de movimento */
+        /* Indicadores de movimento */
         .hint-move::after {
             content: '';
-            width: 20px;
-            height: 20px;
-            background-color: var(--dot-color);
+            width: 22px;
+            height: 22px;
+            background-color: var(--highlight-move);
             border-radius: 50%;
             position: absolute;
         }
 
-        /* Aro de captura */
         .hint-capture::after {
             content: '';
-            width: 50px;
-            height: 50px;
-            border: 5px solid var(--dot-color);
+            width: 54px;
+            height: 54px;
+            border: 4px solid var(--highlight-move);
             border-radius: 50%;
             position: absolute;
         }
 
-        /* Rei em Xeque */
-        .in-check {
-            background: radial-gradient(ellipse at center, #ff4444 0%, transparent 70%);
-        }
-
-        /* Peças */
         .piece {
             width: 60px;
             height: 60px;
             background-size: 90%;
             background-position: center;
             background-repeat: no-repeat;
-            z-index: 10;
+            z-index: 5;
             transition: transform 0.1s;
         }
-        
-        .piece:hover {
-            transform: scale(1.05);
-        }
+        .piece:hover { transform: scale(1.05); }
 
-        /* Painel de Controle e Status */
         .controls {
             display: flex;
             gap: 15px;
-            margin-top: 10px;
+            width: 100%;
+            justify-content: center;
         }
 
         button {
-            background-color: #403d39;
-            color: #fff;
+            padding: 10px 20px;
             border: none;
-            padding: 12px 24px;
+            border-radius: 5px;
             font-size: 1rem;
-            border-radius: 6px;
-            cursor: pointer;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
-            transition: background 0.2s;
             font-weight: bold;
+            cursor: pointer;
+            transition: opacity 0.2s;
         }
-
-        button:hover { background-color: #55524e; }
-        button:active { transform: translateY(1px); }
-
-        button.btn-restart { background-color: #85a94e; }
-        button.btn-restart:hover { background-color: #96bc5c; }
+        button:hover { opacity: 0.9; }
+        
+        .btn-undo { background-color: #555; color: white; }
+        .btn-restart { background-color: #d32f2f; color: white; }
 
         #status {
             font-size: 1.2rem;
-            background: rgba(0,0,0,0.2);
+            color: #fff;
+            background: rgba(0,0,0,0.3);
             padding: 8px 20px;
-            border-radius: 8px;
-            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 20px;
+            margin-bottom: 10px;
         }
-
     </style>
 </head>
 <body>
 
     <div class="main-container">
-        <h1>Xadrez Clássico</h1>
+        <h1>Xadrez Master</h1>
         <div id="status">Vez das Brancas</div>
 
         <div class="board-layout">
-            <!-- Coordenadas Esquerda (8 a 1) -->
+            <!-- Coordenadas 8-1 -->
             <div class="coords-rank">
                 <span>8</span><span>7</span><span>6</span><span>5</span>
                 <span>4</span><span>3</span><span>2</span><span>1</span>
@@ -194,10 +173,10 @@
             <!-- Tabuleiro -->
             <div id="board"></div>
 
-            <!-- Espaço vazio canto inferior esquerdo -->
+            <!-- Canto vazio -->
             <div></div>
 
-            <!-- Coordenadas Baixo (a a h) -->
+            <!-- Coordenadas A-H -->
             <div class="coords-file">
                 <span>a</span><span>b</span><span>c</span><span>d</span>
                 <span>e</span><span>f</span><span>g</span><span>h</span>
@@ -205,22 +184,21 @@
         </div>
 
         <div class="controls">
-            <button onclick="undoMove()">Voltar Jogada</button>
+            <button class="btn-undo" onclick="undoMove()">Voltar Jogada</button>
             <button class="btn-restart" onclick="restartGame()">Reiniciar Jogo</button>
         </div>
     </div>
 
 <script>
-    // Inicialização da Lógica
     const game = new Chess();
     let selectedSquare = null;
     const boardEl = document.getElementById('board');
     const statusEl = document.getElementById('status');
 
-    // URLs verificadas e funcionais da Wikimedia Commons
+    // URLs Oficiais da Wikimedia Commons (Garantidas)
     const pieceImages = {
         'w': {
-            'p': 'https://upload.wikimedia.org/wikipedia/commons/4/45/Chess_plt45.svg',
+            'p': 'https://upload.wikimedia.org/wikipedia/commons/1/10/Chess_plt45.svg',
             'r': 'https://upload.wikimedia.org/wikipedia/commons/7/72/Chess_rlt45.svg',
             'n': 'https://upload.wikimedia.org/wikipedia/commons/7/70/Chess_nlt45.svg',
             'b': 'https://upload.wikimedia.org/wikipedia/commons/b/b1/Chess_blt45.svg',
@@ -245,11 +223,11 @@
 
         for (let r = 0; r < 8; r++) {
             for (let f = 0; f < 8; f++) {
-                const squareId = files[f] + ranks[r];
+                const sqId = files[f] + ranks[r];
                 const div = document.createElement('div');
                 div.className = `square ${isLight ? 'light' : 'dark'}`;
-                div.dataset.id = squareId;
-                div.onclick = () => handleSquareClick(squareId);
+                div.dataset.id = sqId;
+                div.onclick = () => handleSquareClick(sqId);
                 boardEl.appendChild(div);
                 isLight = !isLight;
             }
@@ -259,17 +237,17 @@
     }
 
     function drawPieces() {
-        // Limpa estados visuais anteriores
+        // Limpa visual
         document.querySelectorAll('.square').forEach(sq => {
-            sq.innerHTML = ''; // Remove peça antiga
+            sq.innerHTML = '';
             sq.classList.remove('selected', 'hint-move', 'hint-capture', 'in-check');
         });
 
-        // Posiciona peças
-        const boardState = game.board();
+        // Coloca peças
+        const board = game.board();
         for (let r = 0; r < 8; r++) {
             for (let c = 0; c < 8; c++) {
-                const piece = boardState[r][c];
+                const piece = board[r][c];
                 if (piece) {
                     const files = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
                     const ranks = ['8', '7', '6', '5', '4', '3', '2', '1'];
@@ -277,12 +255,12 @@
                     const sqDiv = document.querySelector(`.square[data-id="${sqId}"]`);
                     
                     if (sqDiv) {
-                        const imgDiv = document.createElement('div');
-                        imgDiv.className = 'piece';
-                        imgDiv.style.backgroundImage = `url(${pieceImages[piece.color][piece.type]})`;
-                        sqDiv.appendChild(imgDiv);
+                        const img = document.createElement('div');
+                        img.className = 'piece';
+                        img.style.backgroundImage = `url(${pieceImages[piece.color][piece.type]})`;
+                        sqDiv.appendChild(img);
 
-                        // Checagem visual de Rei em xeque
+                        // Rei em xeque
                         if (piece.type === 'k' && game.in_check() && piece.color === game.turn()) {
                             sqDiv.classList.add('in-check');
                         }
@@ -294,18 +272,41 @@
     }
 
     function handleSquareClick(id) {
-        const piece = game.get(id);
-        const turn = game.turn(); // 'w' ou 'b'
-
-        // 1. Se clicou na mesma casa selecionada -> Desseleciona
+        const clickedPiece = game.get(id);
+        
+        // Se clicar na mesma casa selecionada, cancela
         if (selectedSquare === id) {
             selectedSquare = null;
             drawPieces();
             return;
         }
 
-        // 2. Tentar mover se já temos uma seleção
+        // Se já tem algo selecionado, tenta mover
         if (selectedSquare) {
+            
+            // LÓGICA ESPECIAL PARA ROQUE CLICANDO NA TORRE
+            const selectedPieceObj = game.get(selectedSquare);
+            if (selectedPieceObj && selectedPieceObj.type === 'k' && clickedPiece && clickedPiece.type === 'r' && clickedPiece.color === selectedPieceObj.color) {
+                // Usuário clicou no Rei e depois na Torre. Tentar Roque.
+                let castleMove = null;
+                // Roque Brancas
+                if (selectedSquare === 'e1' && id === 'h1') castleMove = 'g1'; // Rei Pequeno
+                if (selectedSquare === 'e1' && id === 'a1') castleMove = 'c1'; // Rei Grande
+                // Roque Pretas
+                if (selectedSquare === 'e8' && id === 'h8') castleMove = 'g8'; // Rei Pequeno
+                if (selectedSquare === 'e8' && id === 'a8') castleMove = 'c8'; // Rei Grande
+
+                if (castleMove) {
+                    const move = game.move({ from: selectedSquare, to: castleMove });
+                    if (move) {
+                        selectedSquare = null;
+                        drawPieces();
+                        return;
+                    }
+                }
+            }
+
+            // Tentativa de movimento normal
             const move = game.move({
                 from: selectedSquare,
                 to: id,
@@ -319,23 +320,22 @@
             }
         }
 
-        // 3. Selecionar nova peça (somente se for a vez dela)
-        if (piece && piece.color === turn) {
+        // Selecionar nova peça (apenas se for a vez da cor)
+        if (clickedPiece && clickedPiece.color === game.turn()) {
             selectedSquare = id;
-            drawPieces(); // Redesenha para limpar dicas anteriores
+            drawPieces(); // Limpa dicas anteriores
             
-            // Marca seleção
-            document.querySelector(`.square[data-id="${id}"]`).classList.add('selected');
+            const sqDiv = document.querySelector(`.square[data-id="${id}"]`);
+            sqDiv.classList.add('selected');
 
-            // Mostra dicas de movimento
+            // Mostrar movimentos possíveis
             const moves = game.moves({ square: id, verbose: true });
             moves.forEach(m => {
-                const targetSq = document.querySelector(`.square[data-id="${m.to}"]`);
-                // Se a casa destino tem peça, é captura
+                const targetDiv = document.querySelector(`.square[data-id="${m.to}"]`);
                 if (game.get(m.to)) {
-                    targetSq.classList.add('hint-capture');
+                    targetDiv.classList.add('hint-capture');
                 } else {
-                    targetSq.classList.add('hint-move');
+                    targetDiv.classList.add('hint-move');
                 }
             });
         }
@@ -343,14 +343,14 @@
 
     function updateStatus() {
         let msg = '';
-        const colorName = game.turn() === 'w' ? 'Brancas' : 'Pretas';
+        const turn = game.turn() === 'w' ? 'Brancas' : 'Pretas';
 
         if (game.in_checkmate()) {
             msg = `Xeque-mate! Vitória das ${game.turn() === 'w' ? 'Pretas' : 'Brancas'}`;
         } else if (game.in_draw()) {
             msg = 'Empate!';
         } else {
-            msg = `Vez das ${colorName}`;
+            msg = `Vez das ${turn}`;
             if (game.in_check()) msg += ' (XEQUE!)';
         }
         statusEl.innerText = msg;
@@ -368,9 +368,8 @@
         drawPieces();
     }
 
-    // Iniciar
+    // Inicia
     initBoard();
-
 </script>
 </body>
 </html>
