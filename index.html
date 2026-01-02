@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Xadrez Premium V2</title>
+    <!-- Biblioteca de lógica de xadrez -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
+    <style>
+        :root {
+            --bg-color: #262421;
+            --board-border: #383531;
+            --square-light: #ebecd0;
+            --square-dark: #779556; /* Cor verde clássica de apps de xadrez */
+            --coord-color: #999;
+            --highlight-move: rgba(0, 0, 0, 0.14);
+            --highlight-selected: rgba(255, 255, 50, 0.5);
+        }
+
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background-color: var(--bg-color);
+            color: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+        }
+
+        h1 { margin-bottom: 5px; font-weight: 300; }
+
+        .game-area {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+        }
+
+        /* Container que segura as coordenadas e o tabuleiro */
+        .board-wrapper {
+            display: grid;
+            grid-template-columns: 30px auto; /* Coluna dos números + Tabuleiro */
+            grid-template-rows: auto 30px;    /* Tabuleiro + Linha das letras */
+            background-color: var(--board-border);
+            padding: 5px;
+            border-radius: 5px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.6);
+        }
+
+        /* Coordenadas Laterais (Números 8-1) */
+        .ranks {
+            display: flex;
+            flex-direction: column;
+            justify-content: space-around;
+            align-items: center;
+            font-weight: bold;
+            color: var(--coord-color);
+            font-size: 14px;
+        }
+
+        /* Coordenadas Inferiores (Letras a-h) */
+        .files {
+            grid-column: 2; /* Fica abaixo do tabuleiro */
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            font-weight: bold;
+            color: var(--coord-color);
+            font-size: 14px;
+        }
+
+        /* O Tabuleiro em si */
+        #board {
+            width: 480px;
+            height: 480px;
+            display: grid;
+            grid-template-columns: repeat(8, 1fr);
+            grid-template-rows: repeat(8, 1fr);
+            user-select: none;
+            cursor: pointer;
+        }
+
+        .square {
+            width: 60px;
+            height: 60px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+        }
+
+        .square.light { background-color: var(--square-light); }
+        .square.dark { background-color: var(--square-dark); }
+
+        /* Destaques e Seleção */
+        .square.selected { background-color: var(--highlight-selected) !important; }
+        
+        /* Bolinha de movimento possível */
+        .possible-move::after {
+            content: '';
+            width: 18px;
+            height: 18px;
+            background: rgba(0,0,0,0.15);
+            border-radius: 50%;
+            position: absolute;
+        }
+        
+        /* Aro de captura */
+        .possible-capture::after {
+            content: '';
+            width: 50px;
+            height: 50px;
+            border: 5px solid rgba(0,0,0,0.15);
+            border-radius: 50%;
+            position: absolute;
+        }
+
+        .square.in-check {
+            background: radial-gradient(circle, #ff5555 50%, transparent 80%);
+        }
+
+        /* Peças */
+        .piece {
+            width: 60px; /* Tamanho total da casa */
+            height: 60px;
+            background-repeat: no-repeat;
+            background-position: center;
+            background-size: 85%; /* Um pouco menor para não encostar nas bordas */
+            z-index: 10;
+            transition: transform 0.15s ease-out;
+        }
+        
+        .piece:hover { transform: scale(1.05); }
+
+        /* Controles */
+        .controls {
+            display: flex;
+            gap: 15px;
+            margin-top: 10px;
+        }
+
+        button {
+            padding: 10px 25px;
+            border: none;
+            border-radius: 4px;
+            font-weight: bold;
+            cursor: pointer;
+            font-family: inherit;
+            transition: all 0.2s;
+        }
+
+        .btn-undo { background-color: #4b4847; color: #fff; }
+        .btn-undo:hover { background-color: #615e5d; }
+
+        .btn-restart { background-color: #81b64c; color: #fff; }
+        .btn-restart:hover { background-color: #a3d160; }
+
+        #status {
+            font-size: 1.1rem;
+            color: #ddd;
+            background: rgba(255,255,255,0.05);
+            padding: 8px 16px;
+            border-radius: 15px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="game-area">
+        <h1>Xadrez Clássico</h1>
+        <div id="status">Brancas jogam</div>
+
+        <div class="board-wrapper">
+            <!-- Números à esquerda -->
+            <div class="ranks">
+                <div>8</div><div>7</div><div>6</div><div>5</div>
+                <div>4</div><div>3</div><div>2</div><div>1</div>
+            </div>
+
+            <!-- Tabuleiro -->
+            <div id="board"></div>
+
+            <!-- Canto vazio (alinhar grid) -->
+            <div></div> 
+
+            <!-- Letras embaixo -->
+            <div class="files">
+                <div>a</div><div>b</div><div>c</div><div>d</div>
+                <div>e</div><div>f</div><div>g</div><div>h</div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <button class="btn-undo" onclick="undoMove()">Voltar</button>
+            <button class="btn-restart" onclick="restartGame()">Reiniciar</button>
+        </div>
+    </div>
+
+<script>
+    const game = new Chess();
+    let selectedSquare = null;
+    const boardElement = document.getElementById('board');
+    const statusElement = document.getElementById('status');
+
+    // URLs verificadas das peças
+    const pieces = {
+        'w': {
+            'p': 'https://upload.wikimedia.org/wikipedia/commons/1/10/Chess_plt45.svg',
+            'r': 'https://upload.wikimedia.org/wikipedia/commons/7/72/Chess_rlt45.svg',
+            'n': 'https://upload.wikimedia.org/wikipedia/commons/7/70/Chess_nlt45.svg',
+            'b': 'https://upload.wikimedia.org/wikipedia/commons/b/b1/Chess_blt45.svg',
+            'q': 'https://upload.wikimedia.org/wikipedia/commons/1/15/Chess_qlt45.svg',
+            'k': 'https://upload.wikimedia.org/wikipedia/commons/4/42/Chess_klt45.svg'
+        },
+        'b': {
+            'p': 'https://upload.wikimedia.org/wikipedia/commons/c/c7/Chess_pdt45.svg',
+            'r': 'https://upload.wikimedia.org/wikipedia/commons/f/ff/Chess_rdt45.svg',
+            'n': 'https://upload.wikimedia.org/wikipedia/commons/e/ef/Chess_ndt45.svg',
+            'b': 'https://upload.wikimedia.org/wikipedia/commons/9/98/Chess_bdt45.svg',
+            'q': 'https://upload.wikimedia.org/wikipedia/commons/4/47/Chess_qdt45.svg',
+            'k': 'https://upload.wikimedia.org/wikipedia/commons/f/f0/Chess_kdt45.svg'
+        }
+    };
+
+    function createBoard() {
+        boardElement.innerHTML = '';
+        const files = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
+        const ranks = ['8', '7', '6', '5', '4', '3', '2', '1'];
+        let isWhite = true;
+
+        for (let r = 0; r < 8; r++) {
+            for (let f = 0; f < 8; f++) {
+                const squareId = files[f] + ranks[r];
+                const squareDiv = document.createElement('div');
+                squareDiv.classList.add('square');
+                squareDiv.classList.add(isWhite ? 'light' : 'dark');
+                squareDiv.dataset.id = squareId;
+                
+                squareDiv.addEventListener('click', () => onSquareClick(squareId));
+                boardElement.appendChild(squareDiv);
+                
+                isWhite = !isWhite;
+            }
+            isWhite = !isWhite;
+        }
+        renderPieces();
+    }
+
+    function renderPieces() {
+        // Remove estilos antigos e peças antigas
+        document.querySelectorAll('.square').forEach(sq => {
+            sq.classList.remove('selected', 'possible-move', 'possible-capture', 'in-check');
+            sq.innerHTML = ''; // Limpa a imagem da peça
+        });
+
+        // Coloca as peças no tabuleiro
+        game.board().forEach((row, rIndex) => {
+            row.forEach((piece, cIndex) => {
+                if (piece) {
+                    const files = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
+                    const ranks = ['8', '7', '6', '5', '4', '3', '2', '1'];
+                    const squareId = files[cIndex] + ranks[rIndex];
+                    const squareDiv = document.querySelector(`.square[data-id="${squareId}"]`);
+                    
+                    const pieceImg = document.createElement('div');
+                    pieceImg.classList.add('piece');
+                    // Verifica se a chave existe antes de atribuir
+                    if(pieces[piece.color] && pieces[piece.color][piece.type]) {
+                        pieceImg.style.backgroundImage = `url(${pieces[piece.color][piece.type]})`;
+                    }
+                    squareDiv.appendChild(pieceImg);
+
+                    // Verifica xeque
+                    if (game.in_check() && piece.type === 'k' && piece.color === game.turn()) {
+                        squareDiv.classList.add('in-check');
+                    }
+                }
+            });
+        });
+
+        updateStatus();
+    }
+
+    function onSquareClick(squareId) {
+        const piece = game.get(squareId);
+        
+        // 1. Clicou na mesma casa para cancelar seleção
+        if (selectedSquare === squareId) {
+            selectedSquare = null;
+            renderPieces();
+            return;
+        }
+
+        // 2. Se já tem algo selecionado, tenta mover
+        if (selectedSquare) {
+            const move = game.move({
+                from: selectedSquare,
+                to: squareId,
+                promotion: 'q' // Sempre promove para Rainha (simplificação)
+            });
+
+            if (move) {
+                // Movimento válido
+                selectedSquare = null;
+                renderPieces();
+                return;
+            }
+        }
+
+        // 3. Selecionar nova peça (se for da cor de quem joga)
+        if (piece && piece.color === game.turn()) {
+            selectedSquare = squareId;
+            renderPieces(); // Limpa destaques anteriores
+            
+            // Adiciona destaque na peça selecionada
+            document.querySelector(`.square[data-id="${squareId}"]`).classList.add('selected');
+            
+            // Calcula e mostra movimentos possíveis
+            const moves = game.moves({ square: squareId, verbose: true });
+            moves.forEach(move => {
+                const targetSquare = document.querySelector(`.square[data-id="${move.to}"]`);
+                if (game.get(move.to)) {
+                    targetSquare.classList.add('possible-capture');
+                } else {
+                    targetSquare.classList.add('possible-move');
+                }
+            });
+        }
+    }
+
+    function updateStatus() {
+        let status = '';
+        const turnColor = game.turn() === 'b' ? 'Pretas' : 'Brancas';
+
+        if (game.in_checkmate()) {
+            status = `Xeque-mate! Vitória das ${game.turn() === 'b' ? 'Brancas' : 'Pretas'}.`;
+        } else if (game.in_draw()) {
+            status = 'Empate!';
+        } else {
+            status = `Vez das ${turnColor}`;
+            if (game.in_check()) {
+                status += ' (EM XEQUE!)';
+            }
+        }
+        statusElement.innerText = status;
+    }
+
+    function undoMove() {
+        game.undo();
+        selectedSquare = null;
+        renderPieces();
+    }
+
+    function restartGame() {
+        game.reset();
+        selectedSquare = null;
+        renderPieces();
+    }
+
+    // Inicializa o jogo
+    createBoard();
+
+</script>
+</body>
+</html>
