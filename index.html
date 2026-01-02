@@ -3,11 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Xadrez Master - Com Editor</title>
-    <!-- Biblioteca de lógica Chess.js -->
+    <title>Xadrez Master - Editor & Jogo</title>
+    <!-- Importa chess.js -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
     <style>
         :root {
+            /* Cores e Estilos */
             --bg-body: #262522;
             --bg-panel: #262522;
             --board-border: #3c3b39;
@@ -24,8 +25,6 @@
             --btn-hover: #585653;
             --btn-disabled: #2f2e2c;
             --btn-text: #cacaca;
-            --btn-active: #2b2a28;
-            
             --modal-bg: rgba(0, 0, 0, 0.85);
         }
 
@@ -56,33 +55,23 @@
             position: relative;
         }
 
-        /* Layout Tabuleiro */
+        /* --- Tabuleiro --- */
         .board-container {
             display: grid;
             grid-template-columns: 25px auto;
             grid-template-rows: auto 25px;
         }
 
-        .coords-rank {
-            display: flex;
-            flex-direction: column;
-            justify-content: space-around;
-            align-items: center;
-            color: var(--coord-color);
-            font-size: 13px;
-            font-weight: 600;
-        }
-
-        .coords-file {
-            grid-column: 2;
+        .coords-rank, .coords-file {
             display: flex;
             justify-content: space-around;
             align-items: center;
             color: var(--coord-color);
             font-size: 13px;
             font-weight: 600;
-            padding-top: 4px;
         }
+        .coords-rank { flex-direction: column; }
+        .coords-file { grid-column: 2; padding-top: 4px; }
 
         #board {
             width: 480px;
@@ -93,13 +82,9 @@
             border: 3px solid var(--board-border);
             border-radius: 3px;
             overflow: hidden;
-            position: relative;
         }
 
-        /* Quando em modo editor, borda muda de cor para indicar */
-        #board.editing {
-            border-color: #d69e2e;
-        }
+        #board.editing { border-color: #d69e2e; }
 
         .square {
             width: 60px;
@@ -117,169 +102,101 @@
         .square.in-check { background: var(--highlight-check); }
 
         .hint-move::after {
-            content: '';
-            width: 20px;
-            height: 20px;
+            content: ''; width: 20px; height: 20px;
             background-color: var(--highlight-move);
-            border-radius: 50%;
-            position: absolute;
-            pointer-events: none;
+            border-radius: 50%; position: absolute; pointer-events: none;
         }
 
         .hint-capture::after {
-            content: '';
-            width: 54px;
-            height: 54px;
+            content: ''; width: 54px; height: 54px;
             border: 5px solid var(--highlight-capture);
-            border-radius: 50%;
-            position: absolute;
-            pointer-events: none;
+            border-radius: 50%; position: absolute; pointer-events: none;
         }
 
         .piece {
-            width: 60px;
-            height: 60px;
-            background-size: 100%;
-            background-position: center;
-            background-repeat: no-repeat;
-            z-index: 10;
+            width: 60px; height: 60px;
+            background-size: 100%; background-position: center;
+            background-repeat: no-repeat; z-index: 10;
         }
 
-        /* Status e Controles */
+        /* --- Status e Controles --- */
         #status {
-            font-size: 1rem;
-            color: #ddd;
+            font-size: 1rem; color: #ddd;
             background: rgba(255,255,255,0.08);
-            padding: 6px 16px;
-            border-radius: 12px;
+            padding: 6px 16px; border-radius: 12px;
             margin-bottom: 5px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
         }
 
         .controls {
-            display: flex;
-            gap: 8px;
-            margin-top: 10px;
-            width: 100%;
-            justify-content: center;
-            flex-wrap: wrap;
+            display: flex; gap: 8px; margin-top: 10px;
+            width: 100%; justify-content: center; flex-wrap: wrap;
         }
 
         button {
-            background-color: var(--btn-bg);
-            color: var(--btn-text);
-            border: none;
-            padding: 10px 16px;
-            font-size: 14px;
-            font-weight: 600;
-            border-radius: 4px;
-            cursor: pointer;
+            background-color: var(--btn-bg); color: var(--btn-text);
+            border: none; padding: 10px 16px;
+            font-size: 14px; font-weight: 600;
+            border-radius: 4px; cursor: pointer;
             border-bottom: 3px solid rgba(0,0,0,0.2);
             transition: all 0.15s;
-            display: flex;
-            align-items: center;
-            gap: 6px;
         }
 
-        button:hover:not(:disabled) {
-            background-color: var(--btn-hover);
-            color: #fff;
-            transform: translateY(-1px);
-        }
-
-        button:active:not(:disabled) {
-            transform: translateY(1px);
-            border-bottom-width: 0px;
-            margin-top: 3px;
-        }
-
-        button:disabled {
-            background-color: var(--btn-disabled);
-            color: var(--btn-text-disabled);
-            cursor: not-allowed;
-            border-bottom: 3px solid transparent;
-            transform: none;
-        }
+        button:hover:not(:disabled) { background-color: var(--btn-hover); color: #fff; transform: translateY(-1px); }
+        button:active:not(:disabled) { transform: translateY(1px); border-bottom-width: 0; margin-top: 3px; }
+        button:disabled { background-color: var(--btn-disabled); color: #555; cursor: not-allowed; border-bottom: 3px solid transparent; transform: none; }
 
         .btn-restart { background-color: #bf4040; color: #ffdada; }
         .btn-restart:hover:not(:disabled) { background-color: #d64a4a; }
         
         .btn-editor { background-color: #d69e2e; color: #3e2c00; }
         .btn-editor:hover:not(:disabled) { background-color: #ecc94b; }
-        .btn-editor.active { background-color: #b7791f; border-bottom-width: 0; transform: translateY(2px); box-shadow: inset 0 3px 5px rgba(0,0,0,0.2); }
+        .btn-editor.active { background-color: #b7791f; box-shadow: inset 0 3px 5px rgba(0,0,0,0.2); border-bottom: 0; transform: translateY(2px); margin-top: 2px;}
 
+        /* Controles do Editor */
         .editor-controls {
-            display: none; /* Oculto por padrão */
-            gap: 10px;
-            margin-top: 10px;
-            padding: 10px;
-            background: rgba(0,0,0,0.2);
-            border-radius: 5px;
-            width: 100%;
-            justify-content: center;
+            display: none; gap: 10px; margin-top: 10px;
+            padding: 10px; background: rgba(0,0,0,0.2);
+            border-radius: 5px; width: 100%; justify-content: center;
             box-sizing: border-box;
         }
 
-        /* Modal de Seleção de Peças */
+        .btn-play-white { background-color: #e0e0e0; color: #333; }
+        .btn-play-white:hover:not(:disabled) { background-color: #fff; }
+        
+        .btn-play-black { background-color: #333; color: #ddd; }
+        .btn-play-black:hover:not(:disabled) { background-color: #444; }
+
+        /* Modal Seletor */
         #pieceSelectorModal {
-            display: none;
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: var(--modal-bg);
-            z-index: 100;
-            border-radius: 8px;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            gap: 20px;
+            display: none; position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-color: var(--modal-bg); z-index: 100;
+            border-radius: 8px; flex-direction: column;
+            justify-content: center; align-items: center; gap: 20px;
         }
 
         .selector-grid {
-            display: grid;
-            grid-template-columns: repeat(6, 1fr);
-            gap: 10px;
-            background: #333;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 0 20px rgba(0,0,0,0.8);
+            display: grid; grid-template-columns: repeat(6, 1fr);
+            gap: 10px; background: #333; padding: 20px;
+            border-radius: 8px; box-shadow: 0 0 20px rgba(0,0,0,0.8);
         }
 
         .selector-piece {
-            width: 50px;
-            height: 50px;
-            cursor: pointer;
+            width: 50px; height: 50px; cursor: pointer;
             transition: transform 0.2s;
-            background-size: contain;
-            background-repeat: no-repeat;
+            background-size: contain; background-repeat: no-repeat;
             background-position: center;
         }
         .selector-piece:hover { transform: scale(1.2); }
 
         .selector-trash {
-            grid-column: span 6;
-            background-color: #bf4040;
-            color: white;
-            text-align: center;
-            padding: 10px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-weight: bold;
-            margin-top: 10px;
+            grid-column: span 6; background-color: #bf4040;
+            color: white; text-align: center; padding: 10px;
+            border-radius: 4px; cursor: pointer; font-weight: bold; margin-top: 10px;
         }
-        .selector-trash:hover { background-color: #d64a4a; }
-        
         .selector-cancel {
-            margin-top: 10px;
-            background: transparent;
-            color: #aaa;
-            border: 1px solid #555;
-            padding: 5px 15px;
-            cursor: pointer;
+            background: transparent; color: #aaa;
+            border: 1px solid #555; padding: 5px 15px; cursor: pointer;
         }
 
     </style>
@@ -307,7 +224,7 @@
             </div>
         </div>
 
-        <!-- Botões Principais -->
+        <!-- Botões de Jogo -->
         <div class="controls">
             <button id="btnUndo" onclick="undoMove()" disabled>Voltar</button>
             <button id="btnRedo" onclick="redoMove()" disabled>Avançar</button>
@@ -315,19 +232,18 @@
             <button id="btnEditor" class="btn-editor" onclick="toggleEditor()">Modo Editor</button>
         </div>
 
-        <!-- Controles Específicos do Editor -->
+        <!-- Controles do Editor (Só aparecem editando) -->
         <div id="editorControls" class="editor-controls">
-            <button onclick="clearBoard()">🗑️ Limpar Tudo</button>
-            <button onclick="setTurn('w')">Jogar de Brancas</button>
-            <button onclick="setTurn('b')">Jogar de Pretas</button>
+            <button onclick="clearBoard()" style="background:#c0392b; color:white;">🗑️ Limpar</button>
+            <!-- Botões que agora INICIAM O JOGO -->
+            <button class="btn-play-white" onclick="startGameAs('w')">Jogar de Brancas</button>
+            <button class="btn-play-black" onclick="startGameAs('b')">Jogar de Pretas</button>
         </div>
 
-        <!-- Modal de Seleção de Peças -->
+        <!-- Modal -->
         <div id="pieceSelectorModal">
             <h3 style="color:white; margin:0;">Escolha a Peça</h3>
-            <div class="selector-grid" id="selectorGrid">
-                <!-- Gerado via JS -->
-            </div>
+            <div class="selector-grid" id="selectorGrid"></div>
             <button class="selector-cancel" onclick="closePieceSelector()">Cancelar</button>
         </div>
     </div>
@@ -337,7 +253,7 @@
     let selectedSquare = null;
     let redoStack = [];
     let isEditorMode = false;
-    let editingSquare = null; // Qual casa estamos editando
+    let editingSquare = null;
 
     const boardEl = document.getElementById('board');
     const statusEl = document.getElementById('status');
@@ -349,9 +265,7 @@
 
     // URLs Oficiais (Lichess)
     const getPieceUrl = (color, type) => {
-        const c = color; 
-        const t = type.toUpperCase();
-        return `https://raw.githubusercontent.com/lichess-org/lila/master/public/piece/cburnett/${c}${t}.svg`;
+        return `https://raw.githubusercontent.com/lichess-org/lila/master/public/piece/cburnett/${color}${type.toUpperCase()}.svg`;
     };
 
     function initBoard() {
@@ -372,7 +286,6 @@
             }
             isLight = !isLight;
         }
-        
         createPieceSelector();
         drawPieces();
         updateUI();
@@ -411,14 +324,14 @@
     }
 
     function handleSquareClick(id) {
-        // --- LÓGICA DO MODO EDITOR ---
+        // --- EDITOR ---
         if (isEditorMode) {
             editingSquare = id;
             openPieceSelector();
             return;
         }
 
-        // --- LÓGICA DO MODO JOGO ---
+        // --- JOGO ---
         const clickedPiece = game.get(id);
         
         if (selectedSquare === id) {
@@ -428,23 +341,18 @@
         }
 
         if (selectedSquare) {
+            // Roque
             const selectedPieceObj = game.get(selectedSquare);
-            
-            // Roque manual (Rei -> Torre)
             if (selectedPieceObj && selectedPieceObj.type === 'k' && 
                 clickedPiece && clickedPiece.type === 'r' && clickedPiece.color === selectedPieceObj.color) {
                 let castleMove = null;
                 if (selectedSquare === 'e1') {
-                    if (id === 'h1') castleMove = 'g1';
-                    if (id === 'a1') castleMove = 'c1';
+                    if (id === 'h1') castleMove = 'g1'; if (id === 'a1') castleMove = 'c1';
                 }
                 if (selectedSquare === 'e8') {
-                    if (id === 'h8') castleMove = 'g8';
-                    if (id === 'a8') castleMove = 'c8';
+                    if (id === 'h8') castleMove = 'g8'; if (id === 'a8') castleMove = 'c8';
                 }
-                if (castleMove) {
-                    if(attemptMove({ from: selectedSquare, to: castleMove })) return;
-                }
+                if (castleMove && attemptMove({ from: selectedSquare, to: castleMove })) return;
             }
 
             if (attemptMove({ from: selectedSquare, to: id, promotion: 'q' })) return;
@@ -477,27 +385,26 @@
         return false;
     }
 
-    // --- MODO EDITOR ---
+    // --- LÓGICA DO EDITOR / START GAME ---
 
     function toggleEditor() {
         isEditorMode = !isEditorMode;
-        selectedSquare = null; // Limpa seleções de jogo
+        selectedSquare = null;
         
         if (isEditorMode) {
             btnEditor.classList.add('active');
             btnEditor.innerText = "Sair do Editor";
             boardEl.classList.add('editing');
             editorControls.style.display = 'flex';
-            // Desabilita controles de jogo
             btnUndo.disabled = true;
             btnRedo.disabled = true;
-            statusEl.innerText = "MODO EDITOR: Clique numa casa para colocar/remover peças.";
+            statusEl.innerText = "MODO EDITOR: Configure o tabuleiro.";
         } else {
             btnEditor.classList.remove('active');
             btnEditor.innerText = "Modo Editor";
             boardEl.classList.remove('editing');
             editorControls.style.display = 'none';
-            redoStack = []; // Limpa histórico ao sair do editor para evitar conflitos
+            redoStack = [];
             drawPieces();
             updateUI();
         }
@@ -508,19 +415,42 @@
         drawPieces();
     }
 
-    function setTurn(color) {
-        // Chess.js é rígido com turnos. Para forçar a vez, pegamos o FEN e alteramos a cor ativa.
+    // NOVA FUNÇÃO: Define o turno e sai do editor para jogar
+    function startGameAs(color) {
+        // Validação básica: Precisa ter reis
+        if (!game.king('w') || !game.king('b')) {
+            alert("Para jogar, o tabuleiro deve ter um Rei Branco e um Rei Preto!");
+            return;
+        }
+
+        // Manipula FEN para definir a vez
         let fen = game.fen();
         let parts = fen.split(' ');
-        parts[1] = color; // 'w' ou 'b'
-        // Resetar relógio e en-passant para evitar erros
-        parts[3] = '-'; 
+        parts[1] = color; // Define vez
+        parts[3] = '-';   // Reseta en-passant
+        // Resetar contadores para parecer um novo jogo
+        parts[4] = '0';
+        parts[5] = '1';
+        
         const newFen = parts.join(' ');
-        game.load(newFen);
+        
+        try {
+            const loaded = game.load(newFen);
+            if (!loaded) {
+                alert("Posição inválida.");
+                return;
+            }
+        } catch(e) {
+            alert("Erro ao carregar posição. Verifique se é válida.");
+            return;
+        }
+        
+        // Sai do modo editor e inicia o jogo
+        toggleEditor();
         updateStatus();
     }
 
-    // --- SELETOR DE PEÇAS (MODAL) ---
+    // --- SELETOR DE PEÇAS ---
 
     function createPieceSelector() {
         const grid = document.getElementById('selectorGrid');
@@ -528,7 +458,6 @@
         const types = ['p', 'n', 'b', 'r', 'q', 'k'];
         const colors = ['w', 'b'];
 
-        // Cria ícones para peças brancas e pretas
         colors.forEach(c => {
             types.forEach(t => {
                 const div = document.createElement('div');
@@ -539,28 +468,19 @@
             });
         });
 
-        // Botão de remover peça (lixeira)
         const trash = document.createElement('div');
         trash.className = 'selector-trash';
-        trash.innerText = "Remover Peça / Vazio";
+        trash.innerText = "Remover / Vazio";
         trash.onclick = () => removePiece();
         grid.appendChild(trash);
     }
 
-    function openPieceSelector() {
-        pieceSelectorModal.style.display = 'flex';
-    }
-
-    function closePieceSelector() {
-        pieceSelectorModal.style.display = 'none';
-        editingSquare = null;
-    }
+    function openPieceSelector() { pieceSelectorModal.style.display = 'flex'; }
+    function closePieceSelector() { pieceSelectorModal.style.display = 'none'; editingSquare = null; }
 
     function placePiece(color, type) {
         if (editingSquare) {
-            // Remove qualquer peça existente primeiro para garantir
             game.remove(editingSquare);
-            // Coloca a nova peça
             game.put({ type: type, color: color }, editingSquare);
             drawPieces();
         }
@@ -578,10 +498,7 @@
     // --- SISTEMA ---
 
     function updateStatus() {
-        if (isEditorMode) {
-            statusEl.innerText = `Editando... Vez de começar: ${game.turn() === 'w' ? 'Brancas' : 'Pretas'}`;
-            return;
-        }
+        if (isEditorMode) return;
 
         let msg = '';
         const turn = game.turn() === 'w' ? 'Brancas' : 'Pretas';
@@ -629,7 +546,7 @@
         game.reset();
         redoStack = [];
         selectedSquare = null;
-        if (isEditorMode) toggleEditor(); // Sai do editor se reiniciar
+        if (isEditorMode) toggleEditor(); 
         drawPieces();
         updateUI();
     }
