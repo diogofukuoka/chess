@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Xadrez Master - Smart Editor</title>
+    <title>Xadrez Master - Editor Completo</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
     <style>
         :root {
@@ -36,7 +36,7 @@
             justify-content: center;
             min-height: 100vh;
             margin: 0;
-            user-select: none; /* Importante para não selecionar texto ao arrastar */
+            user-select: none;
         }
 
         h1 { margin-bottom: 5px; font-weight: 400; color: #fff; letter-spacing: 0.5px; }
@@ -113,7 +113,7 @@
             width: 60px; height: 60px;
             background-size: 100%; background-position: center;
             background-repeat: no-repeat; z-index: 10;
-            pointer-events: none; /* Permite que o mouse passe pela peça para detectar a casa */
+            pointer-events: none;
         }
 
         #status {
@@ -249,7 +249,7 @@
         return `https://raw.githubusercontent.com/lichess-org/lila/master/public/piece/cburnett/${color}${type.toUpperCase()}.svg`;
     };
 
-    // Listener global para parar de arrastar quando soltar o mouse
+    // Listener global para parar de arrastar
     document.addEventListener('mouseup', () => {
         isDragging = false;
     });
@@ -299,17 +299,22 @@
     }
 
     function tryFillStandard(sqId) {
-        // Verifica se está na linha 1 ou 8
         const rank = sqId[1];
         const file = sqId[0];
         
+        // Linhas 1 e 8: Peças Maiores
         if (rank === '1' || rank === '8') {
             const files = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
             const fileIdx = files.indexOf(file);
             const pieceType = standardBackRank[fileIdx];
-            const color = (rank === '1') ? 'w' : 'b';
-
-            // Coloca a peça e atualiza visualmente
+            const color = (rank === '1') ? 'w' : 'b'; // Brancas na 1, Pretas na 8
+            game.put({ type: pieceType, color: color }, sqId);
+            drawPieces();
+        }
+        // Linhas 2 e 7: Peões
+        else if (rank === '2' || rank === '7') {
+            const pieceType = 'p'; // Peão
+            const color = (rank === '2') ? 'w' : 'b'; // Brancas na 2, Pretas na 7
             game.put({ type: pieceType, color: color }, sqId);
             drawPieces();
         }
@@ -419,7 +424,7 @@
             editorControls.style.display = 'flex';
             btnUndo.disabled = true;
             btnRedo.disabled = true;
-            statusEl.innerText = "MODO EDITOR: Configure o tabuleiro. Arraste na linha 1/8 para preencher.";
+            statusEl.innerText = "MODO EDITOR: Configure o tabuleiro. Arraste nas linhas 1, 2, 7 ou 8.";
         } else {
             btnEditor.classList.remove('active');
             btnEditor.innerText = "Modo Editor";
