@@ -3,12 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Xadrez Master - Editor & Jogo</title>
-    <!-- Importa chess.js -->
+    <title>Xadrez Master - Smart Editor</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
     <style>
         :root {
-            /* Cores e Estilos */
             --bg-body: #262522;
             --bg-panel: #262522;
             --board-border: #3c3b39;
@@ -38,7 +36,7 @@
             justify-content: center;
             min-height: 100vh;
             margin: 0;
-            user-select: none;
+            user-select: none; /* Importante para não selecionar texto ao arrastar */
         }
 
         h1 { margin-bottom: 5px; font-weight: 400; color: #fff; letter-spacing: 0.5px; }
@@ -55,7 +53,6 @@
             position: relative;
         }
 
-        /* --- Tabuleiro --- */
         .board-container {
             display: grid;
             grid-template-columns: 25px auto;
@@ -106,7 +103,6 @@
             background-color: var(--highlight-move);
             border-radius: 50%; position: absolute; pointer-events: none;
         }
-
         .hint-capture::after {
             content: ''; width: 54px; height: 54px;
             border: 5px solid var(--highlight-capture);
@@ -117,9 +113,9 @@
             width: 60px; height: 60px;
             background-size: 100%; background-position: center;
             background-repeat: no-repeat; z-index: 10;
+            pointer-events: none; /* Permite que o mouse passe pela peça para detectar a casa */
         }
 
-        /* --- Status e Controles --- */
         #status {
             font-size: 1rem; color: #ddd;
             background: rgba(255,255,255,0.08);
@@ -140,33 +136,27 @@
             border-bottom: 3px solid rgba(0,0,0,0.2);
             transition: all 0.15s;
         }
-
         button:hover:not(:disabled) { background-color: var(--btn-hover); color: #fff; transform: translateY(-1px); }
         button:active:not(:disabled) { transform: translateY(1px); border-bottom-width: 0; margin-top: 3px; }
         button:disabled { background-color: var(--btn-disabled); color: #555; cursor: not-allowed; border-bottom: 3px solid transparent; transform: none; }
 
         .btn-restart { background-color: #bf4040; color: #ffdada; }
         .btn-restart:hover:not(:disabled) { background-color: #d64a4a; }
-        
         .btn-editor { background-color: #d69e2e; color: #3e2c00; }
         .btn-editor:hover:not(:disabled) { background-color: #ecc94b; }
         .btn-editor.active { background-color: #b7791f; box-shadow: inset 0 3px 5px rgba(0,0,0,0.2); border-bottom: 0; transform: translateY(2px); margin-top: 2px;}
 
-        /* Controles do Editor */
         .editor-controls {
             display: none; gap: 10px; margin-top: 10px;
             padding: 10px; background: rgba(0,0,0,0.2);
             border-radius: 5px; width: 100%; justify-content: center;
             box-sizing: border-box;
         }
-
         .btn-play-white { background-color: #e0e0e0; color: #333; }
         .btn-play-white:hover:not(:disabled) { background-color: #fff; }
-        
         .btn-play-black { background-color: #333; color: #ddd; }
         .btn-play-black:hover:not(:disabled) { background-color: #444; }
 
-        /* Modal Seletor */
         #pieceSelectorModal {
             display: none; position: absolute;
             top: 0; left: 0; width: 100%; height: 100%;
@@ -174,21 +164,17 @@
             border-radius: 8px; flex-direction: column;
             justify-content: center; align-items: center; gap: 20px;
         }
-
         .selector-grid {
             display: grid; grid-template-columns: repeat(6, 1fr);
             gap: 10px; background: #333; padding: 20px;
             border-radius: 8px; box-shadow: 0 0 20px rgba(0,0,0,0.8);
         }
-
         .selector-piece {
             width: 50px; height: 50px; cursor: pointer;
             transition: transform 0.2s;
-            background-size: contain; background-repeat: no-repeat;
-            background-position: center;
+            background-size: contain; background-repeat: no-repeat; background-position: center;
         }
         .selector-piece:hover { transform: scale(1.2); }
-
         .selector-trash {
             grid-column: span 6; background-color: #bf4040;
             color: white; text-align: center; padding: 10px;
@@ -198,33 +184,25 @@
             background: transparent; color: #aaa;
             border: 1px solid #555; padding: 5px 15px; cursor: pointer;
         }
-
     </style>
 </head>
 <body>
 
     <div class="game-wrapper">
         <h1>Xadrez Master</h1>
-        
         <div id="status">Vez das Brancas</div>
 
         <div class="board-container">
             <div class="coords-rank">
-                <span>8</span><span>7</span><span>6</span><span>5</span>
-                <span>4</span><span>3</span><span>2</span><span>1</span>
+                <span>8</span><span>7</span><span>6</span><span>5</span><span>4</span><span>3</span><span>2</span><span>1</span>
             </div>
-
             <div id="board"></div>
-
             <div></div>
-
             <div class="coords-file">
-                <span>a</span><span>b</span><span>c</span><span>d</span>
-                <span>e</span><span>f</span><span>g</span><span>h</span>
+                <span>a</span><span>b</span><span>c</span><span>d</span><span>e</span><span>f</span><span>g</span><span>h</span>
             </div>
         </div>
 
-        <!-- Botões de Jogo -->
         <div class="controls">
             <button id="btnUndo" onclick="undoMove()" disabled>Voltar</button>
             <button id="btnRedo" onclick="redoMove()" disabled>Avançar</button>
@@ -232,15 +210,12 @@
             <button id="btnEditor" class="btn-editor" onclick="toggleEditor()">Modo Editor</button>
         </div>
 
-        <!-- Controles do Editor (Só aparecem editando) -->
         <div id="editorControls" class="editor-controls">
             <button onclick="clearBoard()" style="background:#c0392b; color:white;">🗑️ Limpar</button>
-            <!-- Botões que agora INICIAM O JOGO -->
             <button class="btn-play-white" onclick="startGameAs('w')">Jogar de Brancas</button>
             <button class="btn-play-black" onclick="startGameAs('b')">Jogar de Pretas</button>
         </div>
 
-        <!-- Modal -->
         <div id="pieceSelectorModal">
             <h3 style="color:white; margin:0;">Escolha a Peça</h3>
             <div class="selector-grid" id="selectorGrid"></div>
@@ -254,6 +229,10 @@
     let redoStack = [];
     let isEditorMode = false;
     let editingSquare = null;
+    
+    // Variáveis para o sistema de "pintar" o tabuleiro
+    let isDragging = false; 
+    let hasMovedDuringDrag = false;
 
     const boardEl = document.getElementById('board');
     const statusEl = document.getElementById('status');
@@ -263,10 +242,17 @@
     const editorControls = document.getElementById('editorControls');
     const pieceSelectorModal = document.getElementById('pieceSelectorModal');
 
-    // URLs Oficiais (Lichess)
+    // Ordem padrão das peças na linha 1 e 8 (Coluna a -> h)
+    const standardBackRank = ['r', 'n', 'b', 'q', 'k', 'b', 'n', 'r'];
+
     const getPieceUrl = (color, type) => {
         return `https://raw.githubusercontent.com/lichess-org/lila/master/public/piece/cburnett/${color}${type.toUpperCase()}.svg`;
     };
+
+    // Listener global para parar de arrastar quando soltar o mouse
+    document.addEventListener('mouseup', () => {
+        isDragging = false;
+    });
 
     function initBoard() {
         boardEl.innerHTML = '';
@@ -280,7 +266,14 @@
                 const div = document.createElement('div');
                 div.className = `square ${isLight ? 'light' : 'dark'}`;
                 div.dataset.id = sqId;
+                
+                // Eventos de Jogo e Editor
                 div.onclick = () => handleSquareClick(sqId);
+                
+                // Eventos de "Pintura" no Editor
+                div.onmousedown = (e) => startPaint(sqId, e);
+                div.onmouseenter = () => continuePaint(sqId);
+
                 boardEl.appendChild(div);
                 isLight = !isLight;
             }
@@ -289,6 +282,37 @@
         createPieceSelector();
         drawPieces();
         updateUI();
+    }
+
+    // --- SISTEMA DE PINTURA (DRAG AND FILL) ---
+    function startPaint(sqId, e) {
+        if (!isEditorMode) return;
+        isDragging = true;
+        hasMovedDuringDrag = false;
+        tryFillStandard(sqId);
+    }
+
+    function continuePaint(sqId) {
+        if (!isEditorMode || !isDragging) return;
+        hasMovedDuringDrag = true;
+        tryFillStandard(sqId);
+    }
+
+    function tryFillStandard(sqId) {
+        // Verifica se está na linha 1 ou 8
+        const rank = sqId[1];
+        const file = sqId[0];
+        
+        if (rank === '1' || rank === '8') {
+            const files = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
+            const fileIdx = files.indexOf(file);
+            const pieceType = standardBackRank[fileIdx];
+            const color = (rank === '1') ? 'w' : 'b';
+
+            // Coloca a peça e atualiza visualmente
+            game.put({ type: pieceType, color: color }, sqId);
+            drawPieces();
+        }
     }
 
     function drawPieces() {
@@ -324,14 +348,18 @@
     }
 
     function handleSquareClick(id) {
-        // --- EDITOR ---
+        // --- MODO EDITOR ---
         if (isEditorMode) {
+            // Se o usuário deslizou o mouse pintando as peças, não abra o modal no final
+            if (hasMovedDuringDrag) {
+                return;
+            }
             editingSquare = id;
             openPieceSelector();
             return;
         }
 
-        // --- JOGO ---
+        // --- MODO JOGO ---
         const clickedPiece = game.get(id);
         
         if (selectedSquare === id) {
@@ -341,20 +369,15 @@
         }
 
         if (selectedSquare) {
-            // Roque
             const selectedPieceObj = game.get(selectedSquare);
+            // Roque
             if (selectedPieceObj && selectedPieceObj.type === 'k' && 
                 clickedPiece && clickedPiece.type === 'r' && clickedPiece.color === selectedPieceObj.color) {
                 let castleMove = null;
-                if (selectedSquare === 'e1') {
-                    if (id === 'h1') castleMove = 'g1'; if (id === 'a1') castleMove = 'c1';
-                }
-                if (selectedSquare === 'e8') {
-                    if (id === 'h8') castleMove = 'g8'; if (id === 'a8') castleMove = 'c8';
-                }
+                if (selectedSquare === 'e1') { if (id === 'h1') castleMove = 'g1'; if (id === 'a1') castleMove = 'c1'; }
+                if (selectedSquare === 'e8') { if (id === 'h8') castleMove = 'g8'; if (id === 'a8') castleMove = 'c8'; }
                 if (castleMove && attemptMove({ from: selectedSquare, to: castleMove })) return;
             }
-
             if (attemptMove({ from: selectedSquare, to: id, promotion: 'q' })) return;
         }
 
@@ -385,8 +408,6 @@
         return false;
     }
 
-    // --- LÓGICA DO EDITOR / START GAME ---
-
     function toggleEditor() {
         isEditorMode = !isEditorMode;
         selectedSquare = null;
@@ -398,7 +419,7 @@
             editorControls.style.display = 'flex';
             btnUndo.disabled = true;
             btnRedo.disabled = true;
-            statusEl.innerText = "MODO EDITOR: Configure o tabuleiro.";
+            statusEl.innerText = "MODO EDITOR: Configure o tabuleiro. Arraste na linha 1/8 para preencher.";
         } else {
             btnEditor.classList.remove('active');
             btnEditor.innerText = "Modo Editor";
@@ -415,49 +436,31 @@
         drawPieces();
     }
 
-    // NOVA FUNÇÃO: Define o turno e sai do editor para jogar
     function startGameAs(color) {
-        // Validação básica: Precisa ter reis
         if (!game.king('w') || !game.king('b')) {
             alert("Para jogar, o tabuleiro deve ter um Rei Branco e um Rei Preto!");
             return;
         }
-
-        // Manipula FEN para definir a vez
         let fen = game.fen();
         let parts = fen.split(' ');
-        parts[1] = color; // Define vez
-        parts[3] = '-';   // Reseta en-passant
-        // Resetar contadores para parecer um novo jogo
+        parts[1] = color; 
+        parts[3] = '-';
         parts[4] = '0';
         parts[5] = '1';
-        
         const newFen = parts.join(' ');
-        
         try {
-            const loaded = game.load(newFen);
-            if (!loaded) {
-                alert("Posição inválida.");
-                return;
-            }
-        } catch(e) {
-            alert("Erro ao carregar posição. Verifique se é válida.");
-            return;
-        }
-        
-        // Sai do modo editor e inicia o jogo
-        toggleEditor();
-        updateStatus();
+            if(game.load(newFen)) {
+                toggleEditor();
+                updateStatus();
+            } else { alert("Posição inválida."); }
+        } catch(e) { alert("Erro ao carregar posição."); }
     }
-
-    // --- SELETOR DE PEÇAS ---
 
     function createPieceSelector() {
         const grid = document.getElementById('selectorGrid');
         grid.innerHTML = '';
         const types = ['p', 'n', 'b', 'r', 'q', 'k'];
         const colors = ['w', 'b'];
-
         colors.forEach(c => {
             types.forEach(t => {
                 const div = document.createElement('div');
@@ -467,7 +470,6 @@
                 grid.appendChild(div);
             });
         });
-
         const trash = document.createElement('div');
         trash.className = 'selector-trash';
         trash.innerText = "Remover / Vazio";
@@ -495,22 +497,13 @@
         closePieceSelector();
     }
 
-    // --- SISTEMA ---
-
     function updateStatus() {
         if (isEditorMode) return;
-
         let msg = '';
         const turn = game.turn() === 'w' ? 'Brancas' : 'Pretas';
-
-        if (game.in_checkmate()) {
-            msg = `Xeque-mate! Vitória das ${game.turn() === 'w' ? 'Pretas' : 'Brancas'}`;
-        } else if (game.in_draw()) {
-            msg = 'Empate!';
-        } else {
-            msg = `Vez das ${turn}`;
-            if (game.in_check()) msg += ' (XEQUE!)';
-        }
+        if (game.in_checkmate()) { msg = `Xeque-mate! Vitória das ${game.turn() === 'w' ? 'Pretas' : 'Brancas'}`; } 
+        else if (game.in_draw()) { msg = 'Empate!'; } 
+        else { msg = `Vez das ${turn}`; if (game.in_check()) msg += ' (XEQUE!)'; }
         statusEl.innerText = msg;
     }
 
@@ -523,36 +516,21 @@
     function undoMove() {
         if(isEditorMode) return;
         const move = game.undo();
-        if (move) {
-            redoStack.push(move);
-            selectedSquare = null;
-            drawPieces();
-            updateUI();
-        }
+        if (move) { redoStack.push(move); selectedSquare = null; drawPieces(); updateUI(); }
     }
 
     function redoMove() {
         if(isEditorMode) return;
-        if (redoStack.length > 0) {
-            const move = redoStack.pop();
-            game.move(move);
-            selectedSquare = null;
-            drawPieces();
-            updateUI();
-        }
+        if (redoStack.length > 0) { const move = redoStack.pop(); game.move(move); selectedSquare = null; drawPieces(); updateUI(); }
     }
 
     function restartGame() {
-        game.reset();
-        redoStack = [];
-        selectedSquare = null;
-        if (isEditorMode) toggleEditor(); 
-        drawPieces();
-        updateUI();
+        game.reset(); redoStack = []; selectedSquare = null;
+        if (isEditorMode) toggleEditor();
+        drawPieces(); updateUI();
     }
 
     initBoard();
-
 </script>
 </body>
 </html>
