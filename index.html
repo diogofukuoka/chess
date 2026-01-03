@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Xadrez Master - Editor Completo</title>
+    <title>Xadrez Master - Ultimate Editor</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
     <style>
         :root {
@@ -147,11 +147,24 @@
         .btn-editor.active { background-color: #b7791f; box-shadow: inset 0 3px 5px rgba(0,0,0,0.2); border-bottom: 0; transform: translateY(2px); margin-top: 2px;}
 
         .editor-controls {
-            display: none; gap: 10px; margin-top: 10px;
-            padding: 10px; background: rgba(0,0,0,0.2);
-            border-radius: 5px; width: 100%; justify-content: center;
+            display: none; flex-direction: column; gap: 10px; margin-top: 10px;
+            padding: 15px; background: rgba(0,0,0,0.2);
+            border-radius: 5px; width: 100%; align-items: center;
             box-sizing: border-box;
         }
+
+        .editor-row {
+            display: flex; gap: 10px; justify-content: center; width: 100%; flex-wrap: wrap;
+        }
+        
+        .divider {
+            width: 100%; height: 1px; background: rgba(255,255,255,0.1); margin: 5px 0;
+        }
+
+        /* Botões de Pincel */
+        .btn-paint { opacity: 0.6; border: 2px solid transparent; }
+        .btn-paint.active-paint { opacity: 1; border-color: #d69e2e; background-color: #555; box-shadow: 0 0 10px rgba(214, 158, 46, 0.3); }
+
         .btn-play-white { background-color: #e0e0e0; color: #333; }
         .btn-play-white:hover:not(:disabled) { background-color: #fff; }
         .btn-play-black { background-color: #333; color: #ddd; }
@@ -210,10 +223,25 @@
             <button id="btnEditor" class="btn-editor" onclick="toggleEditor()">Modo Editor</button>
         </div>
 
+        <!-- Controles do Editor Expandidos -->
         <div id="editorControls" class="editor-controls">
-            <button onclick="clearBoard()" style="background:#c0392b; color:white;">🗑️ Limpar</button>
-            <button class="btn-play-white" onclick="startGameAs('w')">Jogar de Brancas</button>
-            <button class="btn-play-black" onclick="startGameAs('b')">Jogar de Pretas</button>
+            
+            <div class="editor-row">
+                <span style="display:flex; align-items:center; font-size:12px; color:#aaa; margin-right:5px;">Pincel (Linhas 3-6):</span>
+                <button id="btnPaintWhite" class="btn-paint active-paint" onclick="setPaintColor('w')">⚪ Peão Branco</button>
+                <button id="btnPaintBlack" class="btn-paint" onclick="setPaintColor('b')">⚫ Peão Preto</button>
+            </div>
+
+            <div class="divider"></div>
+
+            <div class="editor-row">
+                <button onclick="clearBoard()" style="background:#c0392b; color:white;">🗑️ Limpar Tudo</button>
+            </div>
+            
+            <div class="editor-row">
+                <button class="btn-play-white" onclick="startGameAs('w')">Jogar de Brancas</button>
+                <button class="btn-play-black" onclick="startGameAs('b')">Jogar de Pretas</button>
+            </div>
         </div>
 
         <div id="pieceSelectorModal">
@@ -233,6 +261,7 @@
     // Variáveis para o sistema de "pintar" o tabuleiro
     let isDragging = false; 
     let hasMovedDuringDrag = false;
+    let paintColor = 'w'; // Cor padrão do pincel para linhas 3-6
 
     const boardEl = document.getElementById('board');
     const statusEl = document.getElementById('status');
@@ -241,18 +270,16 @@
     const btnEditor = document.getElementById('btnEditor');
     const editorControls = document.getElementById('editorControls');
     const pieceSelectorModal = document.getElementById('pieceSelectorModal');
+    const btnPaintWhite = document.getElementById('btnPaintWhite');
+    const btnPaintBlack = document.getElementById('btnPaintBlack');
 
-    // Ordem padrão das peças na linha 1 e 8 (Coluna a -> h)
     const standardBackRank = ['r', 'n', 'b', 'q', 'k', 'b', 'n', 'r'];
 
     const getPieceUrl = (color, type) => {
         return `https://raw.githubusercontent.com/lichess-org/lila/master/public/piece/cburnett/${color}${type.toUpperCase()}.svg`;
     };
 
-    // Listener global para parar de arrastar
-    document.addEventListener('mouseup', () => {
-        isDragging = false;
-    });
+    document.addEventListener('mouseup', () => { isDragging = false; });
 
     function initBoard() {
         boardEl.innerHTML = '';
@@ -267,10 +294,7 @@
                 div.className = `square ${isLight ? 'light' : 'dark'}`;
                 div.dataset.id = sqId;
                 
-                // Eventos de Jogo e Editor
                 div.onclick = () => handleSquareClick(sqId);
-                
-                // Eventos de "Pintura" no Editor
                 div.onmousedown = (e) => startPaint(sqId, e);
                 div.onmouseenter = () => continuePaint(sqId);
 
@@ -284,38 +308,53 @@
         updateUI();
     }
 
-    // --- SISTEMA DE PINTURA (DRAG AND FILL) ---
+    // --- LÓGICA DO PINCEL ---
+    function setPaintColor(color) {
+        paintColor = color;
+        if (color === 'w') {
+            btnPaintWhite.classList.add('active-paint');
+            btnPaintBlack.classList.remove('active-paint');
+        } else {
+            btnPaintBlack.classList.add('active-paint');
+            btnPaintWhite.classList.remove('active-paint');
+        }
+    }
+
     function startPaint(sqId, e) {
         if (!isEditorMode) return;
         isDragging = true;
         hasMovedDuringDrag = false;
-        tryFillStandard(sqId);
+        tryFillSmart(sqId);
     }
 
     function continuePaint(sqId) {
         if (!isEditorMode || !isDragging) return;
         hasMovedDuringDrag = true;
-        tryFillStandard(sqId);
+        tryFillSmart(sqId);
     }
 
-    function tryFillStandard(sqId) {
-        const rank = sqId[1];
+    function tryFillSmart(sqId) {
+        const rank = parseInt(sqId[1]); // converte para número (1 a 8)
         const file = sqId[0];
         
-        // Linhas 1 e 8: Peças Maiores
-        if (rank === '1' || rank === '8') {
+        // Linhas 1 e 8: Peças Maiores Padrão
+        if (rank === 1 || rank === 8) {
             const files = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
             const fileIdx = files.indexOf(file);
             const pieceType = standardBackRank[fileIdx];
-            const color = (rank === '1') ? 'w' : 'b'; // Brancas na 1, Pretas na 8
+            const color = (rank === 1) ? 'w' : 'b';
             game.put({ type: pieceType, color: color }, sqId);
             drawPieces();
         }
-        // Linhas 2 e 7: Peões
-        else if (rank === '2' || rank === '7') {
-            const pieceType = 'p'; // Peão
-            const color = (rank === '2') ? 'w' : 'b'; // Brancas na 2, Pretas na 7
-            game.put({ type: pieceType, color: color }, sqId);
+        // Linhas 2 e 7: Peões Padrão
+        else if (rank === 2 || rank === 7) {
+            const color = (rank === 2) ? 'w' : 'b';
+            game.put({ type: 'p', color: color }, sqId);
+            drawPieces();
+        }
+        // Linhas 3, 4, 5, 6: Peões da COR SELECIONADA (Paint Color)
+        else if (rank >= 3 && rank <= 6) {
+            game.put({ type: 'p', color: paintColor }, sqId);
             drawPieces();
         }
     }
@@ -353,29 +392,19 @@
     }
 
     function handleSquareClick(id) {
-        // --- MODO EDITOR ---
         if (isEditorMode) {
-            // Se o usuário deslizou o mouse pintando as peças, não abra o modal no final
-            if (hasMovedDuringDrag) {
-                return;
-            }
+            if (hasMovedDuringDrag) return;
             editingSquare = id;
             openPieceSelector();
             return;
         }
 
-        // --- MODO JOGO ---
         const clickedPiece = game.get(id);
         
-        if (selectedSquare === id) {
-            selectedSquare = null;
-            drawPieces();
-            return;
-        }
+        if (selectedSquare === id) { selectedSquare = null; drawPieces(); return; }
 
         if (selectedSquare) {
             const selectedPieceObj = game.get(selectedSquare);
-            // Roque
             if (selectedPieceObj && selectedPieceObj.type === 'k' && 
                 clickedPiece && clickedPiece.type === 'r' && clickedPiece.color === selectedPieceObj.color) {
                 let castleMove = null;
@@ -402,13 +431,7 @@
     function attemptMove(moveObj) {
         try {
             const result = game.move(moveObj);
-            if (result) {
-                selectedSquare = null;
-                redoStack = [];
-                drawPieces();
-                updateUI();
-                return true;
-            }
+            if (result) { selectedSquare = null; redoStack = []; drawPieces(); updateUI(); return true; }
         } catch (e) { return false; }
         return false;
     }
@@ -424,7 +447,7 @@
             editorControls.style.display = 'flex';
             btnUndo.disabled = true;
             btnRedo.disabled = true;
-            statusEl.innerText = "MODO EDITOR: Configure o tabuleiro. Arraste nas linhas 1, 2, 7 ou 8.";
+            statusEl.innerText = "MODO EDITOR: Arraste para preencher. Use o Pincel para Linhas 3-6.";
         } else {
             btnEditor.classList.remove('active');
             btnEditor.innerText = "Modo Editor";
@@ -436,29 +459,18 @@
         }
     }
 
-    function clearBoard() {
-        game.clear();
-        drawPieces();
-    }
+    function clearBoard() { game.clear(); drawPieces(); }
 
     function startGameAs(color) {
-        if (!game.king('w') || !game.king('b')) {
-            alert("Para jogar, o tabuleiro deve ter um Rei Branco e um Rei Preto!");
-            return;
-        }
+        if (!game.king('w') || !game.king('b')) { alert("O tabuleiro precisa de 2 Reis!"); return; }
         let fen = game.fen();
         let parts = fen.split(' ');
-        parts[1] = color; 
-        parts[3] = '-';
-        parts[4] = '0';
-        parts[5] = '1';
+        parts[1] = color; parts[3] = '-'; parts[4] = '0'; parts[5] = '1';
         const newFen = parts.join(' ');
         try {
-            if(game.load(newFen)) {
-                toggleEditor();
-                updateStatus();
-            } else { alert("Posição inválida."); }
-        } catch(e) { alert("Erro ao carregar posição."); }
+            if(game.load(newFen)) { toggleEditor(); updateStatus(); }
+            else { alert("Posição inválida."); }
+        } catch(e) { alert("Erro ao carregar."); }
     }
 
     function createPieceSelector() {
@@ -495,10 +507,7 @@
     }
 
     function removePiece() {
-        if (editingSquare) {
-            game.remove(editingSquare);
-            drawPieces();
-        }
+        if (editingSquare) { game.remove(editingSquare); drawPieces(); }
         closePieceSelector();
     }
 
